@@ -2,6 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import ImageKit from 'imagekit';
 import multer from 'multer';
 import User from './models/User.js';
@@ -11,8 +13,10 @@ import interviewRoutes from './routes/interviewRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import { PDFParse } from 'pdf-parse';
 
-// Load env variables
-dotenv.config();
+// Load env variables from the parent directory where .env lives
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const app = express();
 
@@ -31,9 +35,19 @@ const imagekit = new ImageKit({
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jobtracker';
+console.log('🔗 Connecting to MongoDB...');
+mongoose.connect(mongoUri, {
+  serverSelectionTimeoutMS: 15000, // Fail faster if server unreachable
+  connectTimeoutMS: 15000,
+})
   .then(() => console.log('✅ MongoDB Connected Successfully'))
   .catch((err) => console.error('❌ MongoDB Connection Error: ', err.message));
+
+// Log any connection errors after initial connect
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB Runtime Error:', err.message);
+});
 
 // Basic default route
 app.get('/', (req, res) => {
