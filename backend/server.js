@@ -6,7 +6,10 @@ import ImageKit from 'imagekit';
 import multer from 'multer';
 import User from './models/User.js';
 import Application from './models/Application.js';
-import pdfParse from 'pdf-parse';
+import ResumeAnalysis from './models/ResumeAnalysis.js';
+import interviewRoutes from './routes/interviewRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
+import { PDFParse } from 'pdf-parse';
 
 // Load env variables
 dotenv.config();
@@ -79,7 +82,6 @@ app.get('/api/users/:email', async (req, res) => {
 });
 
 // --- APPLICATION ROUTES ---
-// Add Application
 app.post('/api/applications', async (req, res) => {
   try {
     const newApp = new Application(req.body);
@@ -100,10 +102,36 @@ app.get('/api/applications/:email', async (req, res) => {
   }
 });
 
+app.use('/api/interview', interviewRoutes);
+app.use('/api/jobs', jobRoutes);
+
+async function inferExperienceLevel(text, foundTech) {
+  const lower = text.toLowerCase();
+  const yearsMatch = lower.match(/(\d+)\+?\s*(years|yrs)/);
+  const years = yearsMatch ? parseInt(yearsMatch[1], 10) : 0;
+  if (years >= 5 || foundTech.length >= 8) return 'Senior';
+  if (years >= 2 || foundTech.length >= 4) return 'Mid';
+  return 'Junior';
+}
+
+async function extractTextFromPdf({ buffer, url }) {
+  const parser = buffer
+    ? new PDFParse({ data: buffer })
+    : new PDFParse({ url });
+
+  try {
+    const result = await parser.getText();
+    return result.text || '';
+  } finally {
+    await parser.destroy();
+  }
+}
+
 // --- RESUME API ROUTES ---
 app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
   try {
     let fileUrl = req.body.resumeUrl;
+    const userEmail = req.body.userEmail;
     let pdfBuffer;
 
     if (req.file) {
@@ -115,19 +143,25 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
       });
       fileUrl = uploadResponse.url;
     } else if (fileUrl) {
-      // Fetch the binary buffer from ImageKit URL directly
       const response = await fetch(fileUrl);
+      if (!response.ok) {
+        return res.status(400).json({ message: 'Could not fetch resume from ImageKit. Please re-upload your resume.' });
+      }
       const arrayBuffer = await response.arrayBuffer();
       pdfBuffer = Buffer.from(arrayBuffer);
     }
 
-    if (!pdfBuffer) {
+    if (!pdfBuffer && !fileUrl) {
       return res.status(400).json({ message: 'No resume provided for analysis.' });
     }
 
-    // Parse the PDF buffer into actual Text
-    const pdfData = await pdfParse(pdfBuffer);
-    const text = pdfData.text || '';
+    const text = pdfBuffer
+      ? await extractTextFromPdf({ buffer: pdfBuffer })
+      : await extractTextFromPdf({ url: fileUrl });
+
+    if (!text.trim()) {
+      return res.status(400).json({ message: 'No readable text found in the PDF. Use a text-based PDF, not a scanned image.' });
+    }
     const lowerText = text.toLowerCase();
 
     // Perform rule-based analysis on the actual extracted RESUME TEXT
@@ -137,7 +171,7 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
       'machine learning', 'mongodb', 'express'
     ];
     const foundTech = technicalKeywords.filter(kw => lowerText.includes(kw));
-    const missingTech = technicalKeywords.filter(kw => !lowerText.includes(kw)).slice(0, 3);
+    const missingTech = technicalKeywords.filter(kw => !lowerText.includes(kw)).slice(0, 5);
     
     // Search for standard header structures to determine ATS
     const hasExperience = lowerText.includes('experience') || lowerText.includes('employment') || lowerText.includes('work history');
@@ -180,22 +214,59 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
     if (hasProjects) strengths.push('Included projects section adequately highlights practical experience');
     if (foundTech.length === 0) suggestions.push('Ensure your skills are explicitly listed rather than just implied within descriptions.');
 
-    // Build JSON Response
+    const experienceLevel = await inferExperienceLevel(text, foundTech);
+
     const dynamicAnalysis = {
       overallScore,
       atsScore,
       technicalScore: techScore,
       experienceScore: expScore,
       projectScore: projScore,
-      strengths: strengths.length ? strengths : ['Basic document structure is readable'],
-      weaknesses: weaknesses.length ? weaknesses : ['Formatting could be tailored better for modern layouts'],
-      missingSkills: missingTech.length ? missingTech : ['System Design', 'CI/CD Pipelines'],
-      suggestions: suggestions.length ? suggestions : ['Keep your formatting clean and readable for older ATS systems.'],
-      atsIssues: atsIssues.length ? atsIssues : ['No major structural ATS issues detected.'],
-      resumeSummary: `A ${overallScore > 75 ? 'strong' : 'developing'} resume layout. We found ${foundTech.length} distinct technical skills and ${metricsCount} impact metrics in the text. ${overallScore > 75 ? 'Ready for most applications!' : 'Needs some keyword optimization and structural improvement.'}`,
+      foundSkills: foundTech,
+      metricsCount,
+      wordCount: text.split(/\s+/).filter(Boolean).length,
+      resumeUrl: fileUrl || null,
+      resumeText: text,
+      experienceLevel,
+      strengths,
+      weaknesses,
+      missingSkills: missingTech,
+      suggestions,
+      atsIssues,
+      resumeSummary: `Parsed ${text.split(/\s+/).filter(Boolean).length} words from your resume. Found ${foundTech.length} technical skill${foundTech.length === 1 ? '' : 's'}${foundTech.length ? ` (${foundTech.slice(0, 4).join(', ')})` : ''} and ${metricsCount} quantifiable metric${metricsCount === 1 ? '' : 's'}. ${overallScore > 75 ? 'Strong foundation for ATS screening.' : 'Consider adding more keywords and measurable outcomes.'}`,
       interviewReadiness: overallScore > 80 ? 'High' : overallScore > 60 ? 'Medium' : 'Needs Work',
-      recruiterImpression: `Candidate effectively presents ${foundTech.length > 0 ? `skills involving ${foundTech[0]} & ${foundTech[1] || 'others'}` : 'general'} abilities within the copy. ${metricsCount > 0 ? 'Project impact is nicely quantified.' : 'Impact needs to be quantified to stand out.'}`
+      recruiterImpression: foundTech.length > 0
+        ? `Resume highlights ${foundTech.slice(0, 3).join(', ')}${foundTech.length > 3 ? ` and ${foundTech.length - 3} more skill${foundTech.length - 3 === 1 ? '' : 's'}` : ''}. ${metricsCount > 0 ? `${metricsCount} impact metric${metricsCount === 1 ? '' : 's'} help demonstrate results.` : 'Add numbers to show the impact of your work.'}`
+        : `No common technical keywords detected yet. ${hasExperience ? 'Experience section is present.' : 'Add a clear experience section.'} ${hasEducation ? 'Education is listed.' : 'Include education details.'}`
     };
+
+    if (userEmail) {
+      await ResumeAnalysis.findOneAndUpdate(
+        { userEmail },
+        {
+          $set: {
+            userEmail,
+            resumeUrl: fileUrl || null,
+            resumeText: text,
+            foundSkills: foundTech,
+            strengths,
+            weaknesses,
+            missingSkills: missingTech,
+            suggestions,
+            experienceLevel,
+            overallScore,
+            technicalScore: techScore,
+            experienceScore: expScore,
+            wordCount: dynamicAnalysis.wordCount,
+            metricsCount,
+            resumeSummary: dynamicAnalysis.resumeSummary,
+            recruiterImpression: dynamicAnalysis.recruiterImpression,
+            fullAnalysis: dynamicAnalysis,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     res.json(dynamicAnalysis);
   } catch (error) {

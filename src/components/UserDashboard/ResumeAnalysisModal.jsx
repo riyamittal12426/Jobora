@@ -29,11 +29,14 @@ const CircularScore = ({ score, label, colorClass, strokeColor }) => (
   </div>
 );
 
-const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
+const ResumeAnalysisModal = ({ isOpen, onClose, user, autoAnalyze = false }) => {
   const [step, setStep] = useState('idle'); // idle, loading, results
   const [file, setFile] = useState(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [analysisData, setAnalysisData] = useState(null);
+  const [error, setError] = useState(null);
+
+  const hasStoredResume = user?.resume && user.resume !== 'Uploaded' && user.resume.startsWith('http');
 
   const loadingMessages = [
     "Extracting resume text...",
@@ -49,36 +52,25 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
         setFile(null);
         setAnalysisData(null);
         setLoadingMsgIdx(0);
+        setError(null);
       }, 300);
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    let interval;
-    if (step === 'loading') {
-      interval = setInterval(() => {
-        setLoadingMsgIdx(prev => (prev + 1 < loadingMessages.length ? prev + 1 : prev));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [step]);
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleAnalyze = async () => {
+  const runAnalysis = async (resumeFile = file) => {
     setStep('loading');
+    setError(null);
     
     const formData = new FormData();
-    if (file) {
-      formData.append('resume', file);
-    } else if (user?.resume && user.resume !== 'Uploaded') {
+    if (user?.email) {
+      formData.append('userEmail', user.email);
+    }
+    if (resumeFile) {
+      formData.append('resume', resumeFile);
+    } else if (hasStoredResume) {
       formData.append('resumeUrl', user.resume);
     } else {
-      alert("Please upload a resume to analyze.");
+      setError('Please upload a resume to analyze.');
       setStep('idle');
       return;
     }
@@ -96,12 +88,36 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
       } else {
         throw new Error(data.message || 'Failed analysis');
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
-      alert('Analysis failed. Please try again.');
+      setError(err.message || 'Analysis failed. Please try again.');
       setStep('idle');
     }
   };
+
+  useEffect(() => {
+    if (isOpen && autoAnalyze && hasStoredResume && !file && step === 'idle') {
+      runAnalysis();
+    }
+  }, [isOpen, autoAnalyze, hasStoredResume]);
+
+  useEffect(() => {
+    let interval;
+    if (step === 'loading') {
+      interval = setInterval(() => {
+        setLoadingMsgIdx(prev => (prev + 1 < loadingMessages.length ? prev + 1 : prev));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step]);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleAnalyze = () => runAnalysis();
 
   if (!isOpen) return null;
 
@@ -141,16 +157,22 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
                   <p className="text-sm text-gray-400">We support PDF, DOCX (Max 10MB)</p>
                 </div>
 
-                {user?.resume && user.resume !== 'Uploaded' && !file && (
+                {hasStoredResume && !file && (
                   <div className="p-4 bg-indigo-900/10 border border-indigo-500/30 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <FileText className="text-indigo-400" />
                       <div>
-                        <p className="text-sm font-medium text-indigo-100">Existing Resume Found</p>
-                        <p className="text-xs text-indigo-300/70">Ready to analyze</p>
+                        <p className="text-sm font-medium text-indigo-100">Resume on ImageKit</p>
+                        <p className="text-xs text-indigo-300/70 truncate max-w-[240px]">{user.resume.split('/').pop()}</p>
                       </div>
                     </div>
                     <CheckCircle className="text-indigo-500" size={20} />
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-sm text-red-300">
+                    {error}
                   </div>
                 )}
 
@@ -169,10 +191,11 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
 
                 <button 
                   onClick={handleAnalyze} 
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20"
+                  disabled={!file && !hasStoredResume}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20"
                 >
                   <Sparkles size={18} />
-                  Start Analysis
+                  {hasStoredResume && !file ? 'Analyze Saved Resume' : 'Start Analysis'}
                 </button>
               </motion.div>
             )}
@@ -218,6 +241,39 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
                   </div>
                 </div>
 
+                {/* Parsed Resume Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-center">
+                    <p className="text-2xl font-bold text-indigo-400">{analysisData.wordCount ?? '—'}</p>
+                    <p className="text-xs text-gray-400 mt-1">Words Parsed</p>
+                  </div>
+                  <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-center">
+                    <p className="text-2xl font-bold text-green-400">{analysisData.foundSkills?.length ?? 0}</p>
+                    <p className="text-xs text-gray-400 mt-1">Skills Detected</p>
+                  </div>
+                  <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-center">
+                    <p className="text-2xl font-bold text-blue-400">{analysisData.metricsCount ?? 0}</p>
+                    <p className="text-xs text-gray-400 mt-1">Impact Metrics</p>
+                  </div>
+                  <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-center">
+                    <p className="text-2xl font-bold text-purple-400">{analysisData.interviewReadiness ?? '—'}</p>
+                    <p className="text-xs text-gray-400 mt-1">Interview Ready</p>
+                  </div>
+                </div>
+
+                {analysisData.foundSkills?.length > 0 && (
+                  <div className="bg-gray-900/30 p-5 rounded-xl border border-gray-800">
+                    <h4 className="flex items-center gap-2 font-bold text-indigo-400 mb-4"><Target size={18}/> Skills Found in Your Resume</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {analysisData.foundSkills.map((skill, i) => (
+                        <span key={i} className="px-3 py-1.5 bg-indigo-900/30 border border-indigo-700/50 text-indigo-200 rounded-lg text-xs font-medium capitalize">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Score Indicators */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-800 flex justify-center">
@@ -241,21 +297,25 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
                     <div className="bg-gray-900/30 p-5 rounded-xl border border-gray-800">
                       <h4 className="flex items-center gap-2 font-bold text-green-400 mb-4"><CheckCircle size={18}/> Strengths</h4>
                       <ul className="space-y-3">
-                        {analysisData.strengths.map((s, i) => (
+                        {analysisData.strengths?.length > 0 ? analysisData.strengths.map((s, i) => (
                           <li key={i} className="flex gap-3 text-sm text-gray-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"/> {s}
                           </li>
-                        ))}
+                        )) : (
+                          <li className="text-sm text-gray-500">No major strengths detected yet — add technical keywords and metrics.</li>
+                        )}
                       </ul>
                     </div>
                     <div className="bg-gray-900/30 p-5 rounded-xl border border-gray-800">
                       <h4 className="flex items-center gap-2 font-bold text-yellow-400 mb-4"><AlertCircle size={18}/> Missing Skills</h4>
                       <div className="flex flex-wrap gap-2">
-                        {analysisData.missingSkills.map((m, i) => (
-                          <span key={i} className="px-3 py-1.5 bg-yellow-900/20 border border-yellow-700/50 text-yellow-300 rounded-lg text-xs font-medium">
+                        {analysisData.missingSkills?.length > 0 ? analysisData.missingSkills.map((m, i) => (
+                          <span key={i} className="px-3 py-1.5 bg-yellow-900/20 border border-yellow-700/50 text-yellow-300 rounded-lg text-xs font-medium capitalize">
                             {m}
                           </span>
-                        ))}
+                        )) : (
+                          <span className="text-sm text-gray-500">All common technical keywords were found in your resume.</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -265,22 +325,27 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user }) => {
                     <div className="bg-gray-900/30 p-5 rounded-xl border border-gray-800">
                       <h4 className="flex items-center gap-2 font-bold text-red-400 mb-4"><AlertTriangle size={18} className="lucide-icon" /> Weaknesses & ATS Issues</h4>
                       <ul className="space-y-3">
-                        {analysisData.weaknesses.concat(analysisData.atsIssues).map((w, i) => (
+                        {[...(analysisData.weaknesses || []), ...(analysisData.atsIssues || [])].length > 0
+                          ? [...(analysisData.weaknesses || []), ...(analysisData.atsIssues || [])].map((w, i) => (
                           <li key={i} className="flex gap-3 text-sm text-gray-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0"/> {w}
                           </li>
-                        ))}
+                        )) : (
+                          <li className="text-sm text-gray-500">No structural ATS issues detected in your resume text.</li>
+                        )}
                       </ul>
                     </div>
 
                     <div className="bg-gray-900/30 p-5 rounded-xl border border-gray-800">
                       <h4 className="flex items-center gap-2 font-bold text-blue-400 mb-4"><Sparkles size={18}/> AI Suggestions</h4>
                       <ul className="space-y-3">
-                        {analysisData.suggestions.map((s, i) => (
+                        {analysisData.suggestions?.length > 0 ? analysisData.suggestions.map((s, i) => (
                           <li key={i} className="flex gap-3 text-sm text-gray-300 bg-blue-900/10 p-3 rounded-lg border border-blue-900/30">
                            {s}
                           </li>
-                        ))}
+                        )) : (
+                          <li className="text-sm text-gray-500">Your resume structure looks good — keep metrics and keywords up to date.</li>
+                        )}
                       </ul>
                     </div>
                   </div>

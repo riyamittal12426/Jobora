@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Mic2, Briefcase } from 'lucide-react';
 import ResumeAnalysisModal from '../components/UserDashboard/ResumeAnalysisModal';
 
 const UserDashboard = () => {
@@ -10,6 +10,7 @@ const UserDashboard = () => {
   const [user, setUser] = useState(null);
   const [isNewUser, setIsNewUser] = useState(true);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [autoAnalyzeResume, setAutoAnalyzeResume] = useState(false);
 
   // Lists for Dashboard Tracking
   const [applications, setApplications] = useState(() => JSON.parse(localStorage.getItem('applications')) || []);
@@ -51,6 +52,15 @@ const UserDashboard = () => {
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
       setIsNewUser(false);
+
+      fetch(`http://localhost:5000/api/users/${parsedUser.email}`)
+        .then(res => res.ok ? res.json() : parsedUser)
+        .then(data => {
+          setUser(data);
+          localStorage.setItem('user', JSON.stringify(data));
+        })
+        .catch(err => console.error('Error fetching user profile:', err));
+
       // Fetch user's applications from MongoDB backend
       fetch(`http://localhost:5000/api/applications/${parsedUser.email}`)
         .then(res => res.json())
@@ -254,11 +264,70 @@ const UserDashboard = () => {
           </div>
           <div>
             <button 
-              onClick={() => setIsAnalysisModalOpen(true)}
+              onClick={() => {
+                setAutoAnalyzeResume(true);
+                setIsAnalysisModalOpen(true);
+              }}
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-8 rounded-xl transition-all hover:scale-105 flex items-center gap-3 shadow-lg shadow-indigo-500/25 whitespace-nowrap"
             >
               <Sparkles fill="white" size={20} />
               Analyze Resume
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Mock Interview Premium Card */}
+      <section className="bg-gradient-to-br from-emerald-950/40 via-gray-900/20 to-cyan-950/30 p-6 md:p-8 rounded-2xl border border-emerald-500/25 relative overflow-hidden mb-12 shadow-xl shadow-emerald-900/10">
+        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+          <Mic2 size={160} />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
+              <Mic2 size={14} />
+              AI Interview Simulator
+            </div>
+            <h2 className="text-3xl font-bold mb-3 font-[font2] text-white">AI Mock Interview</h2>
+            <p className="text-emerald-100/70 max-w-2xl text-lg">
+              Practice with a senior FAANG-style interviewer. Questions are generated from your resume — your skills, projects, and achievements — with detailed scoring and a personalized learning roadmap.
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={() => navigate('/mock-interview')}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-xl transition-all hover:scale-105 flex items-center gap-3 shadow-lg shadow-emerald-500/25 whitespace-nowrap"
+            >
+              <Mic2 size={20} />
+              Start Interview
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Job Recommendations Premium Card */}
+      <section className="bg-gradient-to-br from-cyan-950/40 via-gray-900/20 to-blue-950/30 p-6 md:p-8 rounded-2xl border border-cyan-500/25 relative overflow-hidden mb-12 shadow-xl shadow-cyan-900/10">
+        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+          <Briefcase size={160} />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-4 border border-cyan-500/30">
+              <Briefcase size={14} />
+              AI Career Coach
+            </div>
+            <h2 className="text-3xl font-bold mb-3 font-[font2] text-white">AI Job Recommendations</h2>
+            <p className="text-cyan-100/70 max-w-2xl text-lg">
+              Real jobs from JSearch, ranked by AI match score. Get apply readiness scores, skill gap intelligence, career advisor insights, and recruiter-style feedback for every opportunity.
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={() => navigate('/job-recommendations')}
+              className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-xl transition-all hover:scale-105 flex items-center gap-3 shadow-lg shadow-cyan-500/25 whitespace-nowrap"
+            >
+              <Briefcase size={20} />
+              View Recommendations
             </button>
           </div>
         </div>
@@ -368,7 +437,15 @@ const UserDashboard = () => {
           </section>
         </div>
       </div>
-      <ResumeAnalysisModal isOpen={isAnalysisModalOpen} onClose={() => setIsAnalysisModalOpen(false)} user={user} />
+      <ResumeAnalysisModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => {
+          setIsAnalysisModalOpen(false);
+          setAutoAnalyzeResume(false);
+        }}
+        user={user}
+        autoAnalyze={autoAnalyzeResume}
+      />
     </div>
   );
 };
