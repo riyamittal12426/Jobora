@@ -32,9 +32,38 @@ export default function JobRecommendationsPage() {
   const [userEmail, setUserEmail] = useState('');
   const [tab, setTab] = useState<Tab>('jobs');
   const [selectedJob, setSelectedJob] = useState<JobWithAnalysis | null>(null);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
 
   const { session, loading, generating, error, generate, toggleSave, isSaved, setError } =
     useJobRecommendations(userEmail);
+
+  const handleSelectJob = (jobId: string) => {
+    setSelectedJobIds((prev) =>
+      prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
+    );
+  };
+
+  const handleStartSmartApply = () => {
+    if (!session) return;
+    const jobsToAutomate = session.jobs
+      .filter((item) => selectedJobIds.includes(item.job.jobId))
+      .map((item) => ({
+        jobId: item.job.jobId,
+        title: item.job.title,
+        company: item.job.company,
+        location: item.job.location,
+        employmentType: item.job.employmentType,
+        description: item.job.description,
+        applyLink: item.job.applyLink,
+        salaryMin: item.job.salaryMin,
+        salaryMax: item.job.salaryMax,
+        salaryCurrency: item.job.salaryCurrency,
+        matchScore: item.analysis.matchScore,
+        applyReadinessScore: item.analysis.applyReadinessScore || item.analysis.roleFitScore || 50
+      }));
+
+    navigate('/automation', { state: { selectedJobs: jobsToAutomate } });
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -119,11 +148,38 @@ export default function JobRecommendationsPage() {
 
         {session && tab === 'jobs' && (
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="success">{session.jobs.length} Jobs Found</Badge>
-              <Badge variant="default">Avg Match: {session.analytics.averageMatchScore}%</Badge>
-              <Badge variant="outline">Market Alignment: {session.analytics.marketAlignmentScore}%</Badge>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="success">{session.jobs.length} Jobs Found</Badge>
+                <Badge variant="default">Avg Match: {session.analytics.averageMatchScore}%</Badge>
+                <Badge variant="outline">Market Alignment: {session.analytics.marketAlignmentScore}%</Badge>
+              </div>
             </div>
+
+            {selectedJobIds.length > 0 && (
+              <div className="flex flex-wrap justify-between items-center bg-indigo-950/40 border border-indigo-500/30 p-4 rounded-xl gap-3">
+                <div className="text-sm">
+                  <span className="font-bold text-indigo-200">{selectedJobIds.length}</span> jobs selected for automation
+                </div>
+                <div className="flex gap-2.5">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedJobIds([])}
+                  >
+                    Clear Selection
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleStartSmartApply}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                  >
+                    <Sparkles size={14} className="mr-1" /> Start Smart Apply
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-6">
               {session.jobs.map((item) => (
                 <JobCard
@@ -132,6 +188,8 @@ export default function JobRecommendationsPage() {
                   saved={isSaved(item.job.jobId)}
                   onSave={() => toggleSave(item.job.jobId, item.job, item.analysis)}
                   onAnalyze={() => setSelectedJob(item)}
+                  selected={selectedJobIds.includes(item.job.jobId)}
+                  onSelect={() => handleSelectJob(item.job.jobId)}
                 />
               ))}
             </div>

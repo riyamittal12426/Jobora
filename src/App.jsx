@@ -6,6 +6,8 @@ import UserDashboard from './pages/UserDashboard'
 import MockInterviewPage from './features/mock-interview/MockInterviewPage'
 import JobRecommendationsPage from './features/job-recommendations/JobRecommendationsPage'
 import PrepareApplicationPage from './features/autofill/PrepareApplicationPage'
+import AutomationCenterPage from './features/automation/AutomationCenterPage'
+import ProfileSettingsPage from './features/settings/ProfileSettingsPage'
 
 const App = () => {
   return (
@@ -17,6 +19,8 @@ const App = () => {
         <Route path='/mock-interview' element={<MockInterviewPage />} />
         <Route path='/job-recommendations' element={<JobRecommendationsPage />} />
         <Route path='/prepare-application' element={<PrepareApplicationPage />} />
+        <Route path='/automation' element={<AutomationCenterPage />} />
+        <Route path='/settings' element={<ProfileSettingsPage />} />
       </Routes>
     </div>
   )

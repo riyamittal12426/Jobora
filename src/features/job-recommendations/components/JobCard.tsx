@@ -15,9 +15,11 @@ interface JobCardProps {
   saved: boolean;
   onSave: () => void;
   onAnalyze: () => void;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
-export function JobCard({ item, saved, onSave, onAnalyze }: JobCardProps) {
+export function JobCard({ item, saved, onSave, onAnalyze, selected, onSelect }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
   const { job, analysis } = item;
 
@@ -36,11 +38,21 @@ export function JobCard({ item, saved, onSave, onAnalyze }: JobCardProps) {
       <Card className="overflow-hidden border-gray-800 hover:border-indigo-500/30 transition-colors">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg text-white truncate">{job.title}</CardTitle>
-              <p className="mt-1 flex items-center gap-2 text-sm text-gray-400">
-                <Building2 size={14} /> {job.company}
-              </p>
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              {onSelect && (
+                <input
+                  type="checkbox"
+                  checked={selected || false}
+                  onChange={onSelect}
+                  className="mt-1.5 h-4.5 w-4.5 cursor-pointer rounded border-gray-700 bg-gray-800 text-indigo-600 focus:ring-indigo-500"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg text-white truncate">{job.title}</CardTitle>
+                <p className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+                  <Building2 size={14} /> {job.company}
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <MatchBadge score={analysis.matchScore} />

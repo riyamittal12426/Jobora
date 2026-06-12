@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Mic2, Briefcase } from 'lucide-react';
+import { Sparkles, Mic2, Briefcase, Terminal } from 'lucide-react';
 import ResumeAnalysisModal from '../components/UserDashboard/ResumeAnalysisModal';
 import ShapeBlur from '../components/Landing/ShapeBlur';
 
@@ -385,6 +385,34 @@ const UserDashboard = () => {
               >
                 <Sparkles size={20} />
                 Launch Assistant
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* AI-Powered Job Application Automation Center Card */}
+        <section className="bg-gradient-to-br from-violet-950/40 via-gray-900/20 to-fuchsia-950/30 p-6 md:p-8 rounded-2xl border border-violet-500/25 relative overflow-hidden mb-12 shadow-xl shadow-violet-900/10 backdrop-blur-xl">
+          <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+            <Terminal size={160} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold uppercase tracking-wider mb-4 border border-violet-500/30 font-[font2]">
+                <Terminal size={14} />
+                AI Application Automation
+              </div>
+              <h2 className="text-3xl font-bold mb-3 font-[font2] text-white">Application Automation Center</h2>
+              <p className="text-violet-100/70 max-w-2xl text-lg font-[font1]">
+                Auto-apply to Greenhouse, Lever, Wellfound, YC Jobs, and standard career portals. Features human approval safeguards, live form filling, and real-time execution tracing.
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => navigate('/automation')}
+                className="bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 px-8 rounded-xl transition-all hover:scale-105 flex items-center gap-3 shadow-lg shadow-violet-500/25 whitespace-nowrap font-[font2]"
+              >
+                <Terminal size={20} />
+                Open Automation Center
               </button>
             </div>
           </div>
