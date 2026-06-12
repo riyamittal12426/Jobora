@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Target, TrendingUp, BookOpen, MessageSquare } from 'lucide-react';
+import { X, Target, TrendingUp, BookOpen, MessageSquare, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -12,6 +13,7 @@ interface JobMatchModalProps {
 }
 
 export function JobMatchModal({ item, onClose }: JobMatchModalProps) {
+  const navigate = useNavigate();
   if (!item) return null;
   const { job, analysis } = item;
 
@@ -113,12 +115,21 @@ export function JobMatchModal({ item, onClose }: JobMatchModalProps) {
           </div>
 
           <div className="border-t border-gray-800 p-4 flex gap-3">
+            <Button
+              onClick={() => {
+                navigate('/prepare-application', { state: { job } });
+                onClose();
+              }}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 py-2.5 text-sm font-semibold text-white"
+            >
+              <Sparkles size={16} /> Prepare Application
+            </Button>
             {job.applyLink && (
               <a
                 href={job.applyLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex flex-1 items-center justify-center rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600/30 border border-indigo-500/20 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-600/50"
               >
                 Apply to This Role
               </a>

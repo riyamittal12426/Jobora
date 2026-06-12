@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 
-const MODEL = 'llama-3.3-70b-versatile';
+const PRIMARY_MODEL = 'llama-3.3-70b-versatile';
+const FAST_MODEL = 'llama-3.1-8b-instant';
 
 function getClient() {
   if (!process.env.GROQ_API_KEY) {
@@ -18,21 +19,52 @@ function parseJsonResponse(content) {
   return JSON.parse(jsonMatch[0]);
 }
 
-async function chatJson(systemPrompt, userPrompt, temperature = 0.4) {
+async function chatJson(systemPrompt, userPrompt, model = PRIMARY_MODEL, temperature = 0.4, retries = 3, delayMs = 2000) {
   const groq = getClient();
-  const completion = await groq.chat.completions.create({
-    model: MODEL,
-    temperature,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-  });
+  let currentModel = model;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const completion = await groq.chat.completions.create({
+        model: currentModel,
+        temperature,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      });
 
-  const content = completion.choices[0]?.message?.content;
-  if (!content) throw new Error('Empty response from Groq.');
-  return parseJsonResponse(content);
+      const content = completion.choices[0]?.message?.content;
+      if (!content) throw new Error('Empty response from Groq.');
+      return parseJsonResponse(content);
+    } catch (error) {
+      const isRateLimit = error.status === 429 || 
+                          error.message?.includes('429') || 
+                          error.message?.includes('rate_limit') ||
+                          error.message?.includes('Rate limit reached');
+      
+      if (isRateLimit && attempt < retries) {
+        if (currentModel === PRIMARY_MODEL) {
+          console.warn(`[Groq API] Rate limit hit for ${PRIMARY_MODEL}. Falling back to ${FAST_MODEL} immediately...`);
+          currentModel = FAST_MODEL;
+          continue;
+        }
+        
+        let waitTimeMs = delayMs * Math.pow(2, attempt - 1);
+        const match = error.message?.match(/try again in ([\d.]+)\s*s/i);
+        if (match) {
+          const seconds = parseFloat(match[1]);
+          waitTimeMs = Math.ceil((seconds + 1) * 1000);
+        }
+        
+        console.warn(`[Groq API] Rate limit hit for ${currentModel}. Retrying in ${waitTimeMs}ms... (Attempt ${attempt}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 function buildResumeContext(resumeData) {
@@ -82,7 +114,7 @@ ${buildResumeContext(resumeData)}
 Generate exactly ${settings.questionCount} unique, resume-specific questions ordered from warm-up to challenging.
 `.trim();
 
-  const result = await chatJson(systemPrompt, userPrompt, 0.5);
+  const result = await chatJson(systemPrompt, userPrompt, PRIMARY_MODEL, 0.5);
   if (!Array.isArray(result.questions) || result.questions.length === 0) {
     throw new Error('Groq did not return valid interview questions.');
   }
@@ -118,7 +150,7 @@ RESUME CONTEXT (for relevance scoring):
 ${buildResumeContext(resumeData)}
 `.trim();
 
-  return chatJson(systemPrompt, userPrompt, 0.3);
+  return chatJson(systemPrompt, userPrompt, PRIMARY_MODEL, 0.3);
 }
 
 export async function generateFinalInterviewReport(resumeData, settings, qaRecords) {
@@ -186,5 +218,5 @@ ${qaSummary}
 Produce the final assessment report. questionBreakdown must include every question with ideal answer examples tailored to the candidate's resume and target role.
 `.trim();
 
-  return chatJson(systemPrompt, userPrompt, 0.35);
+  return chatJson(systemPrompt, userPrompt, PRIMARY_MODEL, 0.35);
 }

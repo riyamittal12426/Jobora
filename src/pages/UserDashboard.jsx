@@ -362,6 +362,34 @@ const UserDashboard = () => {
           </div>
         </section>
 
+        {/* AI Application Autofill Assistant Premium Card */}
+        <section className="bg-gradient-to-br from-purple-950/40 via-gray-900/20 to-indigo-950/30 p-6 md:p-8 rounded-2xl border border-purple-500/25 relative overflow-hidden mb-12 shadow-xl shadow-purple-900/10 backdrop-blur-xl">
+          <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+            <Sparkles size={160} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wider mb-4 border border-purple-500/30 font-[font2]">
+                <Sparkles size={14} />
+                AI Auto-Fill Assistant
+              </div>
+              <h2 className="text-3xl font-bold mb-3 font-[font2] text-white">AI Application Autofill Assistant</h2>
+              <p className="text-purple-100/70 max-w-2xl text-lg font-[font1]">
+                Draft custom application screening answers, map portal form fields, generate professional cover letters, and inspect recruiter review predictions in a sandbox environment before submission.
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => navigate('/prepare-application')}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-xl transition-all hover:scale-105 flex items-center gap-3 shadow-lg shadow-purple-500/25 whitespace-nowrap font-[font2]"
+              >
+                <Sparkles size={20} />
+                Launch Assistant
+              </button>
+            </div>
+          </div>
+        </section>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column */}
           <div className="space-y-12">

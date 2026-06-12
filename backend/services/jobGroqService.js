@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 
-const MODEL = 'llama-3.3-70b-versatile';
+export const PRIMARY_MODEL = 'llama-3.3-70b-versatile';
+export const FAST_MODEL = 'llama-3.1-8b-instant';
 
 function getClient() {
   if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY is not configured.');
@@ -13,17 +14,48 @@ function parseJson(content) {
   return JSON.parse(match[0]);
 }
 
-async function chatJson(system, user, temperature = 0.35) {
+export async function chatJson(system, user, model = PRIMARY_MODEL, temperature = 0.35, retries = 3, delayMs = 2000) {
   const groq = getClient();
-  const res = await groq.chat.completions.create({
-    model: MODEL,
-    temperature,
-    response_format: { type: 'json_object' },
-    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-  });
-  const content = res.choices[0]?.message?.content;
-  if (!content) throw new Error('Empty Groq response');
-  return parseJson(content);
+  let currentModel = model;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await groq.chat.completions.create({
+        model: currentModel,
+        temperature,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+      });
+      const content = res.choices[0]?.message?.content;
+      if (!content) throw new Error('Empty Groq response');
+      return parseJson(content);
+    } catch (error) {
+      const isRateLimit = error.status === 429 || 
+                          error.message?.includes('429') || 
+                          error.message?.includes('rate_limit') ||
+                          error.message?.includes('Rate limit reached');
+      
+      if (isRateLimit && attempt < retries) {
+        if (currentModel === PRIMARY_MODEL) {
+          console.warn(`[Groq API] Rate limit hit for ${PRIMARY_MODEL}. Falling back to ${FAST_MODEL} immediately...`);
+          currentModel = FAST_MODEL;
+          continue;
+        }
+        
+        let waitTimeMs = delayMs * Math.pow(2, attempt - 1);
+        const match = error.message?.match(/try again in ([\d.]+)\s*s/i);
+        if (match) {
+          const seconds = parseFloat(match[1]);
+          waitTimeMs = Math.ceil((seconds + 1) * 1000);
+        }
+        
+        console.warn(`[Groq API] Rate limit hit for ${currentModel}. Retrying in ${waitTimeMs}ms... (Attempt ${attempt}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 export function buildCandidateProfile(resumeData) {
@@ -72,9 +104,12 @@ Return ONLY valid JSON:
 }`;
 
 export async function analyzeJobMatch(candidateProfile, job) {
+  const profileForMatch = { ...candidateProfile };
+  delete profileForMatch.resumeText;
+
   const user = `
 CANDIDATE PROFILE:
-${JSON.stringify(candidateProfile, null, 2)}
+${JSON.stringify(profileForMatch, null, 2)}
 
 JOB:
 Title: ${job.title}
@@ -89,7 +124,7 @@ ${(job.description || '').slice(0, 6000)}
 Evaluate match strictly against this candidate's actual skills and experience. Reference specific technologies from both resume and job description.
 `.trim();
 
-  return chatJson(MATCH_SYSTEM, user, 0.3);
+  return chatJson(MATCH_SYSTEM, user, FAST_MODEL, 0.3);
 }
 
 export async function analyzeCustomJobDescription(candidateProfile, jobDescription, jobTitle = 'Custom Role') {
@@ -132,7 +167,7 @@ JOB MATCHES: ${JSON.stringify(summary)}
 Identify which missing skills appear most frequently and rank learning priorities.
 `.trim();
 
-  return chatJson(system, user, 0.35);
+  return chatJson(system, user, PRIMARY_MODEL, 0.35);
 }
 
 export async function generateCareerAdvisor(candidateProfile, jobAnalyses) {
@@ -160,13 +195,16 @@ Return ONLY valid JSON:
     recommendation: j.analysis.applyRecommendation,
   }));
 
+  const profileForAdvisor = { ...candidateProfile };
+  delete profileForAdvisor.resumeText;
+
   const user = `
-CANDIDATE: ${JSON.stringify(candidateProfile, null, 2)}
+CANDIDATE: ${JSON.stringify(profileForAdvisor, null, 2)}
 TOP JOB MATCHES: ${JSON.stringify(matches)}
 Provide actionable career mentorship based on real match data.
 `.trim();
 
-  return chatJson(system, user, 0.4);
+  return chatJson(system, user, PRIMARY_MODEL, 0.4);
 }
 
 export function buildApplyReadinessDashboard(jobAnalyses) {

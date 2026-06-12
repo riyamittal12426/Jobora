@@ -11,6 +11,7 @@ import Application from './models/Application.js';
 import ResumeAnalysis from './models/ResumeAnalysis.js';
 import interviewRoutes from './routes/interviewRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
+import autofillRoutes from './routes/autofillRoutes.js';
 import { PDFParse } from 'pdf-parse';
 
 // Load env variables from the parent directory where .env lives
@@ -118,6 +119,7 @@ app.get('/api/applications/:email', async (req, res) => {
 
 app.use('/api/interview', interviewRoutes);
 app.use('/api/jobs', jobRoutes);
+app.use('/api/applications/autofill', autofillRoutes);
 
 async function inferExperienceLevel(text, foundTech) {
   const lower = text.toLowerCase();
