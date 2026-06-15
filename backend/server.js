@@ -14,6 +14,7 @@ import jobRoutes from './routes/jobRoutes.js';
 import autofillRoutes from './routes/autofillRoutes.js';
 import automationRoutes from './routes/automationRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
+import roadmapRoutes from './routes/roadmapRoutes.js';
 import { PDFParse } from 'pdf-parse';
 
 // Load env variables from the parent directory where .env lives
@@ -124,6 +125,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/applications/autofill', autofillRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/prediction', predictionRoutes);
+app.use('/api/roadmap', roadmapRoutes);
 app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
 
 async function inferExperienceLevel(text, foundTech) {

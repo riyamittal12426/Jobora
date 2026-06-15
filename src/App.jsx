@@ -8,6 +8,7 @@ import JobRecommendationsPage from './features/job-recommendations/JobRecommenda
 import PrepareApplicationPage from './features/autofill/PrepareApplicationPage'
 import AutomationCenterPage from './features/automation/AutomationCenterPage'
 import ProfileSettingsPage from './features/settings/ProfileSettingsPage'
+import CareerRoadmapPage from './features/roadmap/CareerRoadmapPage'
 
 const App = () => {
   return (
@@ -21,6 +22,7 @@ const App = () => {
         <Route path='/prepare-application' element={<PrepareApplicationPage />} />
         <Route path='/automation' element={<AutomationCenterPage />} />
         <Route path='/settings' element={<ProfileSettingsPage />} />
+        <Route path='/roadmap' element={<CareerRoadmapPage />} />
       </Routes>
     </div>
   )
