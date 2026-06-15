@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Target, TrendingUp, BookOpen, MessageSquare, Sparkles } from 'lucide-react';
+import { X, Target, TrendingUp, BookOpen, MessageSquare, Sparkles, Zap, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { MatchBadge } from './MatchBadge';
+import { useSuccessPrediction } from '@/hooks/useSuccessPrediction';
+import { PredictionDashboard } from './prediction/PredictionDashboard';
+import { PredictionSkeleton } from './prediction/PredictionSkeleton';
 import type { JobWithAnalysis } from '@/types/jobs';
 
 interface JobMatchModalProps {
@@ -14,6 +18,31 @@ interface JobMatchModalProps {
 
 export function JobMatchModal({ item, onClose }: JobMatchModalProps) {
   const navigate = useNavigate();
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      setUserEmail(JSON.parse(stored).email);
+    }
+  }, []);
+
+  const {
+    prediction,
+    predicting,
+    loading,
+    error: predictionError,
+    getPrediction,
+    loadCachedPrediction,
+    runSimulation,
+  } = useSuccessPrediction(userEmail);
+
+  useEffect(() => {
+    if (userEmail && item?.job?.jobId) {
+      loadCachedPrediction(item.job.jobId);
+    }
+  }, [userEmail, item?.job?.jobId, loadCachedPrediction]);
+
   if (!item) return null;
   const { job, analysis } = item;
 
@@ -62,6 +91,59 @@ export function JobMatchModal({ item, onClose }: JobMatchModalProps) {
                   <Progress value={s.value} />
                 </div>
               ))}
+            </div>
+
+            {/* Application Success Predictor Section */}
+            <div className="border border-gray-800 bg-gray-950/20 rounded-2xl p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg p-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
+                    <Zap size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-indigo-200 font-[font2]">Application Success Predictor</h3>
+                    <p className="text-[11px] text-gray-500">Shortlist, interview & hire success probability</p>
+                  </div>
+                </div>
+
+                {!prediction && !predicting && !loading && (
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 h-8 text-xs"
+                    onClick={() => getPrediction(job)}
+                  >
+                    <Zap size={12} className="mr-1" /> Run Prediction
+                  </Button>
+                )}
+                {prediction && !predicting && !loading && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => getPrediction(job, true)}
+                    className="border-gray-800 hover:bg-gray-800 text-gray-400 px-3 py-1.5 h-8 text-xs"
+                  >
+                    <RefreshCw size={11} className="mr-1" /> Re-Predict
+                  </Button>
+                )}
+              </div>
+
+              {predictionError && (
+                <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-950/20 p-3 text-xs text-red-300">
+                  <AlertTriangle size={14} /> {predictionError}
+                </div>
+              )}
+
+              {(predicting || loading) && (
+                <PredictionSkeleton />
+              )}
+
+              {prediction && !predicting && !loading && (
+                <PredictionDashboard
+                  prediction={prediction}
+                  job={job}
+                  onSimulate={(mods) => runSimulation(job, mods)}
+                />
+              )}
             </div>
 
             <section>

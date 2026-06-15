@@ -13,6 +13,7 @@ import interviewRoutes from './routes/interviewRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import autofillRoutes from './routes/autofillRoutes.js';
 import automationRoutes from './routes/automationRoutes.js';
+import predictionRoutes from './routes/predictionRoutes.js';
 import { PDFParse } from 'pdf-parse';
 
 // Load env variables from the parent directory where .env lives
@@ -122,6 +123,7 @@ app.use('/api/interview', interviewRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications/autofill', autofillRoutes);
 app.use('/api/automation', automationRoutes);
+app.use('/api/prediction', predictionRoutes);
 app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
 
 async function inferExperienceLevel(text, foundTech) {
@@ -185,18 +187,18 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
 
     // Perform rule-based analysis on the actual extracted RESUME TEXT
     const technicalKeywords = [
-      'javascript', 'react', 'node', 'python', 'java', 'sql', 'aws', 
-      'docker', 'typescript', 'html', 'css', 'git', 'c++', 
+      'javascript', 'react', 'node', 'python', 'java', 'sql', 'aws',
+      'docker', 'typescript', 'html', 'css', 'git', 'c++',
       'machine learning', 'mongodb', 'express'
     ];
     const foundTech = technicalKeywords.filter(kw => lowerText.includes(kw));
     const missingTech = technicalKeywords.filter(kw => !lowerText.includes(kw)).slice(0, 5);
-    
+
     // Search for standard header structures to determine ATS
     const hasExperience = lowerText.includes('experience') || lowerText.includes('employment') || lowerText.includes('work history');
     const hasEducation = lowerText.includes('education') || lowerText.includes('university') || lowerText.includes('degree');
     const hasProjects = lowerText.includes('project');
-    
+
     // Look for numbers with percentages or K/M (e.g. "improved by 20%", "saved $10k") for impact metrics
     const metricsCount = (text.match(/\d+[%kK\+]/g) || []).length;
 
@@ -212,13 +214,13 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
     const weaknesses = [];
     const atsIssues = [];
     const suggestions = [];
-    
+
     if (foundTech.length >= 4) {
       strengths.push(`Strong variety of technical skills discovered (${foundTech.slice(0, 3).join(', ')}, etc.)`);
     } else {
       weaknesses.push('Could include more relevant technical keywords');
     }
-    
+
     if (metricsCount >= 2) {
       strengths.push(`Excellent use of quantifiable metrics (${metricsCount} key metrics found)`);
     } else {
