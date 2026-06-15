@@ -1,6 +1,16 @@
 import type { AutomationRun, SubmittedApplication } from '@/types/automation';
 
-const API = 'http://localhost:5000/api/automation';
+import { API_BASE_URL } from './apiConfig';
+
+const API = `${API_BASE_URL}/api/automation`;
+
+const getHeaders = (hasBody = true) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
 
 async function handle<T>(res: Response): Promise<T> {
   const data = await res.json();
@@ -12,58 +22,63 @@ export const automationApi = {
   startRun: (email: string, jobs: any[]) =>
     fetch(`${API}/start`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify({ userEmail: email, jobs })
     }).then(r => handle<AutomationRun>(r)),
 
   getRun: (runId: string) =>
-    fetch(`${API}/run/${runId}`).then(r => handle<AutomationRun>(r)),
+    fetch(`${API}/run/${runId}`, { headers: getHeaders(false) }).then(r => handle<AutomationRun>(r)),
 
   getRuns: (email: string) =>
-    fetch(`${API}/runs/${encodeURIComponent(email)}`).then(r => handle<AutomationRun[]>(r)),
+    fetch(`${API}/runs/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<AutomationRun[]>(r)),
 
   approveJob: (runId: string, jobIndex: number) =>
     fetch(`${API}/run/${runId}/job/${jobIndex}/approve`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getHeaders(false)
     }).then(r => handle<{ success: boolean; message: string }>(r)),
 
   resumeJob: (runId: string, jobIndex: number) =>
     fetch(`${API}/run/${runId}/job/${jobIndex}/resume`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getHeaders(false)
     }).then(r => handle<{ success: boolean; message: string }>(r)),
 
   skipJob: (runId: string, jobIndex: number) =>
     fetch(`${API}/run/${runId}/job/${jobIndex}/skip`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getHeaders(false)
     }).then(r => handle<{ success: boolean; message: string }>(r)),
 
   retryJob: (runId: string, jobIndex: number) =>
     fetch(`${API}/run/${runId}/job/${jobIndex}/retry`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getHeaders(false)
     }).then(r => handle<{ success: boolean; message: string; run: AutomationRun }>(r)),
 
   updateJobDetails: (runId: string, jobIndex: number, data: { detectedFields?: any[]; generatedAnswers?: any[] }) =>
     fetch(`${API}/run/${runId}/job/${jobIndex}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify(data)
     }).then(r => handle<{ success: boolean; message: string; run: AutomationRun }>(r)),
 
   cancelRun: (runId: string) =>
     fetch(`${API}/run/${runId}/cancel`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getHeaders(false)
     }).then(r => handle<{ success: boolean; message: string }>(r)),
 
   getSubmittedApplications: (email: string) =>
-    fetch(`${API}/submitted/${encodeURIComponent(email)}`).then(r => handle<SubmittedApplication[]>(r)),
+    fetch(`${API}/submitted/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<SubmittedApplication[]>(r)),
 
   getSubmittedApplication: (id: string) =>
-    fetch(`${API}/submitted/${id}`).then(r => handle<SubmittedApplication>(r)),
+    fetch(`${API}/submitted/${id}`, { headers: getHeaders(false) }).then(r => handle<SubmittedApplication>(r)),
 
   updateSubmittedApplication: (id: string, data: { status?: string; followUpNotes?: string; timeline?: any[] }) =>
     fetch(`${API}/submitted/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify(data)
     }).then(r => handle<SubmittedApplication>(r)),
 

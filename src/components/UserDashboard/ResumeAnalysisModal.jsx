@@ -5,6 +5,7 @@ import {
   CheckCircle, AlertCircle, Target, BarChart, ChevronRight 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { API_BASE_URL } from '@/services/apiConfig';
 
 const CircularScore = ({ score, label, colorClass, strokeColor }) => (
   <div className="flex flex-col items-center">
@@ -76,8 +77,10 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user, autoAnalyze = false }) => 
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/resume/analyze', {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/resume/analyze`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
       });
       const data = await res.json();

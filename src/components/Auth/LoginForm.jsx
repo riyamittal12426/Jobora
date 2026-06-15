@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { API_BASE_URL } from '@/services/apiConfig';
+
 const LoginForm = ({ toggleForm }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -8,16 +10,23 @@ const LoginForm = ({ toggleForm }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Logging in with:', email, password);
+    console.log('Logging in with:', email);
     // Authenticate with MongoDB backend
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${email}`);
+      const res = await fetch(`${API_BASE_URL}/api/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
       if (res.ok) {
-        const userData = await res.json();
-        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         navigate('/dashboard');
       } else {
-        alert('User not found. Please sign up first.');
+        alert(data.message || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       console.error('Error logging in:', err);

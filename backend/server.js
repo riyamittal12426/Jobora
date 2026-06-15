@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import ImageKit from 'imagekit';
 import multer from 'multer';
 import User from './models/User.js';
+import authMiddleware, { hashPassword, verifyPassword, signToken } from './middleware/auth.js';
 import Application from './models/Application.js';
 import ResumeAnalysis from './models/ResumeAnalysis.js';
 import interviewRoutes from './routes/interviewRoutes.js';
@@ -25,14 +26,28 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches localhost or 127.0.0.1 on any port
+    const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (isLocal) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json()); // Allows parsing JSON bodies
 
 // ImageKit Initialization
 const imagekit = new ImageKit({
-  publicKey: "public_l6Cq20xKs2RG3i0SpYNqf5coZTI=",
-  privateKey: "private_7TSpOUWgxQIbwPKeGHJkbQ253+4=",
-  urlEndpoint: "https://ik.imagekit.io/kuvu4dxxv"
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "public_l6Cq20xKs2RG3i0SpYNqf5coZTI=",
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "private_7TSpOUWgxQIbwPKeGHJkbQ253+4=",
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || "https://ik.imagekit.io/kuvu4dxxv"
 });
 
 // Multer Initialization (Store file in memory temporarily)
@@ -58,42 +73,176 @@ app.get('/', (req, res) => {
   res.send('JobTracker API is running...');
 });
 
-// --- USER ROUTES ---
-// Register User Profile with ImageKit Resume Upload
-app.post('/api/users/profile', upload.single('resume'), async (req, res) => {
+// --- USER AUTH & PROFILE ROUTES ---
+
+// 1. Signup Route
+app.post('/api/users/signup', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (!existingUser.password) {
+        // Claim passwordless legacy account
+        const hashedPassword = hashPassword(password);
+        existingUser.password = hashedPassword;
+        await existingUser.save();
+        const token = signToken({ email: existingUser.email, id: existingUser._id });
+        return res.status(201).json({
+          message: 'Legacy account claimed successfully',
+          token,
+          user: {
+            firstName: existingUser.firstName,
+            lastName: existingUser.lastName,
+            email: existingUser.email,
+            phone: existingUser.phone,
+            age: existingUser.age,
+            address: existingUser.address,
+            resume: existingUser.resume
+          }
+        });
+      }
+      return res.status(400).json({ message: 'A user with this email already exists.' });
+    }
+
+    const hashedPassword = hashPassword(password);
+    const newUser = new User({
+      email,
+      password: hashedPassword
+    });
+
+    await newUser.save();
+    const token = signToken({ email: newUser.email, id: newUser._id });
+
+    res.status(201).json({
+      message: 'Signup successful',
+      token,
+      user: { email: newUser.email }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 2. Login Route
+app.post('/api/users/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    if (!user.password) {
+      // Claim passwordless legacy account automatically on first login attempt
+      const hashedPassword = hashPassword(password);
+      user.password = hashedPassword;
+      await user.save();
+      const token = signToken({ email: user.email, id: user._id });
+      return res.json({
+        message: 'Login successful (legacy account claimed)',
+        token,
+        user: {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          age: user.age,
+          address: user.address,
+          resume: user.resume
+        }
+      });
+    }
+
+    const isMatch = verifyPassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    const token = signToken({ email: user.email, id: user._id });
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        age: user.age,
+        address: user.address,
+        resume: user.resume
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 3. Register/Update User Profile (Authenticated)
+app.post('/api/users/profile', authMiddleware, upload.single('resume'), async (req, res) => {
   try {
     let resumeUrl = req.body.resume;
 
     // Check if a file was actually uploaded
     if (req.file) {
       const uploadResponse = await imagekit.upload({
-        file: req.file.buffer, // upload the buffer directly from memory
+        file: req.file.buffer,
         fileName: req.file.originalname,
         folder: '/jobtracker_resumes'
       });
-      resumeUrl = uploadResponse.url; // Save the ImageKit URL
+      resumeUrl = uploadResponse.url;
     }
 
-    const userData = { ...req.body, resume: resumeUrl };
-    // Try to find the user by email and update, or create if it doesn't exist
+    const email = req.user.email;
+    const { password, ...userData } = req.body;
+    if (resumeUrl) {
+      userData.resume = resumeUrl;
+    }
+
     const savedUser = await User.findOneAndUpdate(
-      { email: req.body.email },
+      { email },
       { $set: userData },
-      { new: true, upsert: true }
+      { new: true }
     );
-    res.status(201).json(savedUser);
+
+    if (!savedUser) {
+      return res.status(404).json({ message: 'User profile not found.' });
+    }
+
+    const userObj = savedUser.toObject();
+    delete userObj.password;
+
+    res.status(200).json(userObj);
   } catch (error) {
     console.error('Error saving profile:', error);
     res.status(400).json({ message: error.message });
   }
 });
 
-// Get User by Email
-app.get('/api/users/:email', async (req, res) => {
+// 4. Get User by Email (Authenticated & Scoped)
+app.get('/api/users/:email', authMiddleware, async (req, res) => {
   try {
+    if (req.user.email !== req.params.email) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
     const user = await User.findOne({ email: req.params.email });
-    if (user) res.json(user);
-    else res.status(404).json({ message: 'User not found' });
+    if (user) {
+      const userObj = user.toObject();
+      delete userObj.password;
+      res.json(userObj);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -296,6 +445,15 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
     console.error('Error analyzing resume:', error);
     res.status(500).json({ message: 'Failed to analyze resume. Please ensure it is a text-based PDF.' });
   }
+});
+
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error('[Global Error]', err.stack || err.message);
+  if (err.name === 'CastError') {
+    return res.status(400).json({ message: `Invalid resource identifier: ${err.value}` });
+  }
+  res.status(500).json({ message: err.message || 'An unexpected server error occurred.' });
 });
 
 // Start Server

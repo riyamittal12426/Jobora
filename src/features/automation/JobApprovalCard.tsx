@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sparkles, Eye, Check, X, Save, FileText, Image as ImageIcon, CheckCircle, RefreshCw } from 'lucide-react';
 import { automationApi } from '@/services/automationApi';
 import type { JobAutomationEntry, DetectedField, GeneratedAnswer } from '@/types/automation';
+import { API_BASE_URL } from '@/services/apiConfig';
 
 interface JobApprovalCardProps {
   runId: string;
@@ -388,7 +389,7 @@ export default function JobApprovalCard({
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <video
-                src={`http://localhost:5000${jobEntry.videoPath}`}
+                src={`${API_BASE_URL}${jobEntry.videoPath}`}
                 controls
                 autoPlay
                 loop

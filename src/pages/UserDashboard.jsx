@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Mic2, Briefcase, Terminal, Compass } from 'lucide-react';
 import ResumeAnalysisModal from '../components/UserDashboard/ResumeAnalysisModal';
 import ShapeBlur from '../components/Landing/ShapeBlur';
+import { API_BASE_URL } from '@/services/apiConfig';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -14,8 +15,24 @@ const UserDashboard = () => {
   const [autoAnalyzeResume, setAutoAnalyzeResume] = useState(false);
 
   // Lists for Dashboard Tracking
-  const [applications, setApplications] = useState(() => JSON.parse(localStorage.getItem('applications')) || []);
-  const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('events')) || []);
+  const [applications, setApplications] = useState(() => {
+    try {
+      const stored = localStorage.getItem('applications');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('Failed to parse applications:', e);
+      return [];
+    }
+  });
+  const [events, setEvents] = useState(() => {
+    try {
+      const stored = localStorage.getItem('events');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('Failed to parse events:', e);
+      return [];
+    }
+  });
 
   // Form State for Profile Creation
   const [profileForm, setProfileForm] = useState({
@@ -50,28 +67,35 @@ const UserDashboard = () => {
     // Check if user exists in local storage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setIsNewUser(false);
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setIsNewUser(false);
 
-      fetch(`http://localhost:5000/api/users/${parsedUser.email}`)
-        .then(res => res.ok ? res.json() : parsedUser)
-        .then(data => {
-          setUser(data);
-          localStorage.setItem('user', JSON.stringify(data));
-        })
-        .catch(err => console.error('Error fetching user profile:', err));
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      // Fetch user's applications from MongoDB backend
-      fetch(`http://localhost:5000/api/applications/${parsedUser.email}`)
-        .then(res => res.json())
-        .then(data => {
-          // Map _id to id so frontend mapping isn't broken
-          const mappedData = data.map(app => ({ ...app, id: app._id }));
-          setApplications(mappedData);
-          localStorage.setItem('applications', JSON.stringify(mappedData));
-        })
-        .catch(err => console.error("Error fetching applications:", err));
+        fetch(`${API_BASE_URL}/api/users/${parsedUser.email}`, { headers })
+          .then(res => res.ok ? res.json() : parsedUser)
+          .then(data => {
+            setUser(data);
+            localStorage.setItem('user', JSON.stringify(data));
+          })
+          .catch(err => console.error('Error fetching user profile:', err));
+
+        // Fetch user's applications from MongoDB backend
+        fetch(`${API_BASE_URL}/api/applications/${parsedUser.email}`, { headers })
+          .then(res => res.json())
+          .then(data => {
+            // Map _id to id so frontend mapping isn't broken
+            const mappedData = data.map(app => ({ ...app, id: app._id }));
+            setApplications(mappedData);
+            localStorage.setItem('applications', JSON.stringify(mappedData));
+          })
+          .catch(err => console.error("Error fetching applications:", err));
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+      }
     } else {
       // Pre-fill email from signup form
       const signupEmail = localStorage.getItem('signupEmail');
@@ -106,9 +130,11 @@ const UserDashboard = () => {
     }
 
     try {
+      const token = localStorage.getItem('token');
       // Create user profile in MongoDB alongside the Resume upload
-      const response = await fetch('http://localhost:5000/api/users/profile', {
+      const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData // Let the browser set the multi-part content-type headers boundary automatically
       });
       if (response.ok) {
@@ -132,10 +158,14 @@ const UserDashboard = () => {
     e.preventDefault();
     const newAppPayload = { ...appForm, userEmail: user.email };
     try {
+      const token = localStorage.getItem('token');
       // Save application directly to MongoDB
-      const response = await fetch('http://localhost:5000/api/applications', {
+      const response = await fetch(`${API_BASE_URL}/api/applications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(newAppPayload)
       });
       if (response.ok) {

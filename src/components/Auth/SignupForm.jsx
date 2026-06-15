@@ -1,26 +1,47 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { API_BASE_URL } from '@/services/apiConfig';
+
 const SignupForm = ({ toggleForm }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-    console.log('Signing up with:', email, password);
-    // Remove any existing user data to simulate a fresh/new user
-    localStorage.removeItem('user');
-    localStorage.removeItem('applications');
-    localStorage.removeItem('events');
-    // Store email temporarily so Dashboard can prefill it
-    localStorage.setItem('signupEmail', email);
-    navigate('/dashboard');
+    console.log('Signing up with:', email);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Clear any existing user data
+        localStorage.removeItem('user');
+        localStorage.removeItem('applications');
+        localStorage.removeItem('events');
+        
+        // Store token and temporary email so Dashboard can prefill it
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('signupEmail', email);
+        navigate('/dashboard');
+      } else {
+        alert(data.message || 'Signup failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error signing up:', err);
+      alert('Backend connection failed. Is the server running?');
+    }
   };
 
   return (

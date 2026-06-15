@@ -23,19 +23,42 @@ async function getResumeOrFail(email, res) {
   return resumeData;
 }
 
-async function analyzeJobsInBatches(candidateProfile, jobs, batchSize = 2) {
-  const results = [];
-  for (let i = 0; i < jobs.length; i += batchSize) {
-    const batch = jobs.slice(i, i + batchSize);
-    const analyzed = await Promise.all(
-      batch.map(async (job) => {
+async function analyzeJobsInBatches(candidateProfile, jobs) {
+  console.log(`[Job Recs] Analyzing ${jobs.length} jobs in parallel...`);
+  const analyzed = await Promise.all(
+    jobs.map(async (job) => {
+      try {
         const analysis = await analyzeJobMatch(candidateProfile, job);
         return { job, analysis };
-      })
-    );
-    results.push(...analyzed);
-  }
-  return results.sort((a, b) => b.analysis.matchScore - a.analysis.matchScore);
+      } catch (error) {
+        console.error(`[Job Match Failed] jobId: ${job.jobId || job.id}:`, error.message);
+        // Fallback default match data instead of failing the whole batch
+        return {
+          job,
+          analysis: {
+            matchScore: 50,
+            hiringProbability: 'Medium',
+            roleFitScore: 50,
+            skillAlignmentScore: 50,
+            experienceAlignmentScore: 50,
+            strengthsMatched: [],
+            missingSkills: [],
+            whyRecommended: 'General match alignment. Detailed AI feedback fell back due to load.',
+            recruiterFeedback: 'Review alignment details manually.',
+            skillGapAnalysis: 'Refresh recommendation to fetch details.',
+            interviewDifficultyPrediction: 'Medium',
+            expectedSalaryFit: 'Unknown',
+            improvementSuggestions: [],
+            applyReadinessScore: 50,
+            applyRecommendation: 'Apply Soon',
+            applyRecommendationReason: 'Match rating defaults.',
+            interviewProbability: 'Medium'
+          }
+        };
+      }
+    })
+  );
+  return analyzed.sort((a, b) => b.analysis.matchScore - a.analysis.matchScore);
 }
 
 router.get('/recommendations/:email', async (req, res) => {

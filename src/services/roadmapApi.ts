@@ -102,7 +102,17 @@ export interface CareerRoadmap {
   updatedAt: string;
 }
 
-const API = 'http://localhost:5000/api/roadmap';
+import { API_BASE_URL } from './apiConfig';
+
+const API = `${API_BASE_URL}/api/roadmap`;
+
+const getHeaders = (hasBody = true) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
 
 async function handle<T>(res: Response): Promise<T> {
   const data = await res.json();
@@ -112,33 +122,33 @@ async function handle<T>(res: Response): Promise<T> {
 
 export const roadmapApi = {
   getRoadmap: (email: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}`).then((r) => handle<CareerRoadmap>(r)),
+    fetch(`${API}/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((r) => handle<CareerRoadmap>(r)),
 
   generateRoadmap: (email: string, targetRole: string) =>
     fetch(`${API}/${encodeURIComponent(email)}/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify({ targetRole }),
     }).then((r) => handle<CareerRoadmap>(r)),
 
   completeTask: (email: string, taskId: string) =>
     fetch(`${API}/${encodeURIComponent(email)}/complete-task`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify({ taskId }),
     }).then((r) => handle<CareerRoadmap>(r)),
 
   uncompleteTask: (email: string, taskId: string) =>
     fetch(`${API}/${encodeURIComponent(email)}/uncomplete-task`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify({ taskId }),
     }).then((r) => handle<CareerRoadmap>(r)),
 
   askMentor: (email: string, question: string) =>
     fetch(`${API}/${encodeURIComponent(email)}/mentor-ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify({ question }),
     }).then((r) => handle<{ answer: string }>(r)),
 };
