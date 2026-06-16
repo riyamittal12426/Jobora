@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, UploadCloud, FileText, Sparkles, Loader2, 
-  CheckCircle, AlertCircle, Target, BarChart, ChevronRight 
+  CheckCircle, AlertCircle, Target, BarChart, ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '@/services/apiConfig';
@@ -376,13 +377,6 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user, autoAnalyze = false }) => 
   );
 };
 
-// Quick mock icon for the red warning
-const AlertTriangle = ({ size, className }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-    <line x1="12" y1="9" x2="12" y2="13"></line>
-    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-  </svg>
-);
+
 
 export default ResumeAnalysisModal;

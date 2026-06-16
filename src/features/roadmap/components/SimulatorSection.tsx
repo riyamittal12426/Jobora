@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Target, Award, Sparkles, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Target, Award, Sparkles, TrendingUp, Check } from 'lucide-react';
 import type { CareerRoadmap } from '../../../services/roadmapApi';
 
 interface SimulatorSectionProps {
@@ -95,7 +95,7 @@ export default function SimulatorSection({ roadmap }: SimulatorSectionProps) {
                       isChecked ? 'bg-violet-600 border-violet-500 text-white' : 'border-gray-700'
                     }`}>
                       {isChecked && (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <Check size={10} strokeWidth={4} />
                       )}
                     </div>
                     <span className="text-xs font-semibold capitalize truncate max-w-[140px] font-[font1]">{imp.skill}</span>

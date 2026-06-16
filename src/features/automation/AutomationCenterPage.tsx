@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Sparkles, Terminal, Play, ClipboardList, Clock, RefreshCw, XCircle, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
-import ShapeBlur from '@/components/Landing/ShapeBlur';
+import { Sparkles, Terminal, Play, ClipboardList, Clock, RefreshCw, XCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAutomation } from './useAutomation';
 import AutomationLogViewer from './AutomationLogViewer';
 import JobApprovalCard from './JobApprovalCard';
@@ -9,6 +8,7 @@ import SubmittedApplicationCard from './SubmittedApplicationCard';
 import AutomationReviewModal from './AutomationReviewModal';
 import CaptchaResolutionCard from './CaptchaResolutionCard';
 import { automationApi } from '@/services/automationApi';
+import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
 import type { SubmittedApplication } from '@/types/automation';
 
 export default function AutomationCenterPage() {
@@ -78,7 +78,6 @@ export default function AutomationCenterPage() {
   const handleStartSmartApply = async (jobsToSubmit: any[]) => {
     try {
       const run = await startRun(jobsToSubmit);
-      // Remove selected queue from localStorage since it is now running
       localStorage.removeItem('selected_jobs_automation');
       setSelectedQueue([]);
       setActiveTab('live');
@@ -136,7 +135,6 @@ export default function AutomationCenterPage() {
     }
   };
 
-  // Find job awaiting approval or captcha (if any) in the active run
   const jobAwaitingApproval = activeRun?.jobs.find(
     j => j.status === 'awaiting_approval' || j.status === 'captcha_detected' || j.status === 'REVIEW_REQUIRED' || j.status === 'CAPTCHA_REQUIRED'
   );
@@ -145,40 +143,20 @@ export default function AutomationCenterPage() {
   );
 
   return (
-    <div className="relative min-h-screen bg-black text-white p-6 md:p-12 font-[font1] overflow-hidden">
-      {/* ShapeBlur background */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <ShapeBlur
-          variation={0}
-          pixelRatioProp={window.devicePixelRatio || 1}
-          shapeSize={0.8}
-          roundness={0.5}
-          borderSize={0.05}
-          circleSize={0.4}
-          circleEdge={1.2}
-        />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-zinc-400 hover:text-white"
-            >
-              <ArrowLeft size={16} />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold font-[font2] tracking-tight">Application Automation Center</h1>
-              <p className="text-sm text-zinc-400 mt-1">Autonomous browser filling with human approval gates</p>
-            </div>
-          </div>
-          <div className="flex bg-white/5 border border-white/10 p-1 rounded-xl">
+    <DashboardLayout
+      currentPage="automation"
+      pageTitle="Application Automation Center"
+      pageSubtitle="Autonomous form filling and browser automation with smart human approval gates."
+    >
+      <div className="w-full flex flex-col gap-6">
+        
+        {/* Sub Navigation Tabs inside Dashboard shell */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-white/5">
+          <div className="flex bg-white/5 border border-white/10 p-1 rounded-2xl shrink-0">
             <button
               onClick={() => setActiveTab('queue')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'queue' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'queue' ? 'bg-[#7c3aed] text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               <ClipboardList size={14} />
@@ -186,8 +164,8 @@ export default function AutomationCenterPage() {
             </button>
             <button
               onClick={() => setActiveTab('live')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'live' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'live' ? 'bg-[#7c3aed] text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               <Terminal size={14} />
@@ -195,8 +173,8 @@ export default function AutomationCenterPage() {
             </button>
             <button
               onClick={() => setActiveTab('submissions')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'submissions' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'submissions' ? 'bg-[#7c3aed] text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               <Clock size={14} />
@@ -212,15 +190,15 @@ export default function AutomationCenterPage() {
           {activeTab === 'queue' && (
             <div className="space-y-6">
               {selectedQueue.length === 0 ? (
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-4 max-w-xl mx-auto">
-                  <ClipboardList size={48} className="text-zinc-500 opacity-40" />
-                  <h3 className="text-xl font-bold font-[font2]">No Jobs in Queue</h3>
-                  <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
+                <div className="bg-[#181926]/60 border border-white/10 rounded-[32px] p-12 text-center flex flex-col items-center justify-center gap-4 max-w-xl mx-auto backdrop-blur-md">
+                  <ClipboardList size={48} className="text-gray-500 opacity-60" />
+                  <h3 className="text-xl font-bold font-[font2] text-white">No Jobs in Queue</h3>
+                  <p className="text-gray-400 text-xs max-w-xs leading-relaxed font-semibold">
                     You haven't selected any jobs for smart automation yet. Navigate to your job recommendations list to start queuing.
                   </p>
                   <button
                     onClick={() => navigate('/job-recommendations')}
-                    className="bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-violet-500/20 flex items-center gap-2 text-sm font-[font2] mt-2"
+                    className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-lg flex items-center gap-2 text-xs font-[font2] mt-2 cursor-pointer border border-[#7c3aed]/20"
                   >
                     <span>Browse Recommendations</span>
                     <ArrowRight size={14} />
@@ -229,23 +207,23 @@ export default function AutomationCenterPage() {
               ) : (
                 <div className="space-y-6">
                   {/* Summary & actions */}
-                  <div className="flex justify-between items-center bg-white/5 border border-white/10 p-5 rounded-2xl">
+                  <div className="flex justify-between items-center bg-[#181926]/60 border border-white/10 p-5 rounded-2xl backdrop-blur-md">
                     <div>
-                      <h3 className="font-bold text-white text-lg font-[font2]">Queue Ready</h3>
-                      <p className="text-xs text-zinc-400 mt-0.5">
+                      <h3 className="font-bold text-white text-base font-[font2]">Queue Ready</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         Confirm details for the {selectedQueue.length} queued application packages below.
                       </p>
                     </div>
                     <div className="flex gap-3">
                       <button
                         onClick={handleClearQueue}
-                        className="px-4 py-2 border border-red-500/20 bg-red-950/10 hover:bg-red-900/20 text-red-300 rounded-xl text-xs font-bold transition-all"
+                        className="px-4 py-2 border border-red-500/20 bg-red-950/20 hover:bg-red-900/30 text-red-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
                       >
                         Clear Queue
                       </button>
                       <button
                         onClick={() => setIsReviewOpen(true)}
-                        className="bg-violet-600 hover:bg-violet-500 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg hover:shadow-violet-500/20 text-xs flex items-center gap-1.5 font-[font2]"
+                        className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-extrabold py-2.5 px-5 rounded-xl transition-all shadow-lg text-xs flex items-center gap-1.5 font-[font2] cursor-pointer border border-[#7c3aed]/20"
                       >
                         <Play size={12} fill="white" />
                         <span>Start Application Setup</span>
@@ -256,25 +234,25 @@ export default function AutomationCenterPage() {
                   {/* Queue Cards Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {selectedQueue.map((job, idx) => (
-                      <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-violet-500/30 transition-all flex flex-col justify-between h-48">
+                      <div key={idx} className="bg-[#181926]/60 border border-white/10 rounded-3xl p-5 hover:border-violet-500/30 transition-all flex flex-col justify-between h-48 backdrop-blur-md">
                         <div>
                           <div className="flex justify-between items-start">
-                            <h4 className="font-bold text-white text-lg font-[font2] leading-tight truncate max-w-[80%]">
+                            <h4 className="font-bold text-white text-base font-[font2] leading-tight truncate max-w-[80%]">
                               {job.title}
                             </h4>
-                            <span className="text-[10px] uppercase font-bold text-violet-400 bg-violet-600/10 px-2 py-0.5 rounded border border-violet-500/20">
+                            <span className="text-[10px] uppercase font-bold text-purple-400 bg-purple-600/10 px-2 py-0.5 rounded border border-purple-500/20 shrink-0">
                               {job.platform || 'generic'}
                             </span>
                           </div>
-                          <p className="text-zinc-400 text-sm mt-1">{job.company} • {job.location || 'Remote'}</p>
+                          <p className="text-gray-400 text-xs font-semibold mt-1.5">{job.company} • {job.location || 'Remote'}</p>
                         </div>
                         <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-gray-500 font-semibold">
                             Fit Score: <strong className="text-white font-[font2]">{job.matchScore || 75}%</strong>
                           </span>
                           <button
                             onClick={() => navigate('/prepare-application', { state: { selectedJob: job } })}
-                            className="text-xs text-violet-400 hover:text-violet-300 font-bold transition-all flex items-center gap-1"
+                            className="text-xs text-[#a855f7] hover:text-[#c084fc] font-bold transition-all flex items-center gap-1 cursor-pointer"
                           >
                             <span>Inspect Sandbox Draft</span>
                             <ArrowRight size={12} />
@@ -293,27 +271,26 @@ export default function AutomationCenterPage() {
             <div className="space-y-6">
               {!activeRun ? (
                 <div className="space-y-6">
-                  {/* Select previous run from logs history */}
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center max-w-xl mx-auto flex flex-col items-center justify-center gap-3">
-                    <Terminal size={40} className="text-zinc-500 opacity-40" />
-                    <h3 className="text-lg font-bold font-[font2]">No Active Automation Session</h3>
-                    <p className="text-zinc-400 text-xs leading-relaxed max-w-sm">
+                  <div className="bg-[#181926]/60 border border-white/10 rounded-[32px] p-8 text-center max-w-xl mx-auto flex flex-col items-center justify-center gap-3 backdrop-blur-md">
+                    <Terminal size={40} className="text-gray-500 opacity-60" />
+                    <h3 className="text-lg font-bold font-[font2] text-white">No Active Automation Session</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed max-w-sm font-semibold">
                       There are no automation sessions currently running. You can launch one from the Queue Builder tab or inspect history records below.
                     </p>
                   </div>
 
                   {runs.length > 0 && (
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                      <h3 className="font-bold text-sm font-[font2] mb-4 uppercase tracking-wider text-zinc-400">Previous Run Records</h3>
+                    <div className="bg-[#181926]/60 border border-white/10 rounded-[28px] p-6 backdrop-blur-md shadow-lg">
+                      <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 font-[font2] mb-4">Previous Run Records</h3>
                       <div className="space-y-3">
                         {runs.slice(0, 5).map((run) => (
-                          <div key={run._id} className="bg-zinc-950/40 border border-white/5 p-4 rounded-xl flex items-center justify-between hover:border-white/10 transition-all">
+                          <div key={run._id} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-white/10 transition-all">
                             <div>
-                              <p className="text-xs text-zinc-500 font-mono">RUN ID: {run._id.slice(-8)}</p>
-                              <p className="text-sm font-semibold text-white mt-0.5">
+                              <p className="text-xs text-gray-500 font-mono">RUN ID: {run._id.slice(-8)}</p>
+                              <p className="text-sm font-bold text-white mt-0.5">
                                 {run.progress.completed} submitted / {run.progress.total} jobs in run
                               </p>
-                              <p className="text-[10px] text-zinc-600 mt-0.5">
+                              <p className="text-[10px] text-gray-500 mt-0.5">
                                 Created on {new Date(run.createdAt).toLocaleString()}
                               </p>
                             </div>
@@ -323,7 +300,7 @@ export default function AutomationCenterPage() {
                               </span>
                               <button
                                 onClick={() => selectRun(run)}
-                                className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition-all font-bold"
+                                className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition-all font-bold cursor-pointer"
                               >
                                 Open Run
                               </button>
@@ -340,15 +317,15 @@ export default function AutomationCenterPage() {
                   {/* Left (spans 2 Cols): Active Dashboard Panel */}
                   <div className="lg:col-span-2 space-y-6">
                     {/* Status & Cancel Row */}
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl flex justify-between items-center">
+                    <div className="bg-[#181926]/60 border border-white/10 p-5 rounded-2xl flex justify-between items-center backdrop-blur-md">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusBadgeClass(activeRun.status)}`}>
                             {activeRun.status}
                           </span>
-                          <span className="text-xs text-zinc-500 font-mono">ID: {activeRun._id.slice(-8)}</span>
+                          <span className="text-xs text-gray-500 font-mono">ID: {activeRun._id.slice(-8)}</span>
                         </div>
-                        <p className="text-zinc-400 text-xs mt-1">
+                        <p className="text-gray-400 text-xs mt-1 font-semibold">
                           Completed: {activeRun.progress.completed} • Failed: {activeRun.progress.failed} • Skipped: {activeRun.progress.skipped} (Total: {activeRun.progress.total})
                         </p>
                       </div>
@@ -357,7 +334,7 @@ export default function AutomationCenterPage() {
                         {['running', 'paused'].includes(activeRun.status) && (
                           <button
                             onClick={() => cancelRun(activeRun._id)}
-                            className="px-4 py-2 border border-red-500/20 bg-red-950/20 hover:bg-red-900/30 text-red-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                            className="px-4 py-2 border border-red-500/20 bg-red-950/20 hover:bg-red-900/30 text-red-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                           >
                             <XCircle size={14} />
                             <span>Cancel Run</span>
@@ -365,7 +342,7 @@ export default function AutomationCenterPage() {
                         )}
                         <button
                           onClick={clearActiveRun}
-                          className="px-4 py-2 border border-white/10 hover:bg-white/5 rounded-xl text-xs font-bold transition-all"
+                          className="px-4 py-2 border border-white/10 hover:bg-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer"
                         >
                           Exit Session
                         </button>
@@ -373,21 +350,21 @@ export default function AutomationCenterPage() {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-2">
+                    <div className="bg-[#181926]/60 border border-white/10 p-5 rounded-2xl space-y-2 backdrop-blur-md">
                       <div className="flex justify-between text-xs font-bold">
-                        <span className="text-zinc-400 uppercase tracking-wider">Automation Progress Rate</span>
-                        <span className="text-violet-400 font-[font2]">
+                        <span className="text-gray-400 uppercase tracking-wider">Automation Progress Rate</span>
+                        <span className="text-[#a855f7] font-[font2]">
                           {Math.round(
                             ((activeRun.progress.completed + activeRun.progress.skipped) / activeRun.progress.total) * 100
                           )}% Complete
                         </span>
                       </div>
-                      <div className="w-full bg-zinc-950 h-3 rounded-full overflow-hidden border border-white/5">
+                      <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
                         <div
                           style={{
                             width: `${((activeRun.progress.completed + activeRun.progress.skipped) / activeRun.progress.total) * 100}%`
                           }}
-                          className="bg-violet-600 h-full rounded-full transition-all duration-500"
+                          className="bg-[#7c3aed] h-full rounded-full transition-all duration-500"
                         />
                       </div>
                     </div>
@@ -413,10 +390,10 @@ export default function AutomationCenterPage() {
                         />
                       )
                     ) : (
-                      <div className="bg-white/5 border border-white/10 p-10 rounded-2xl text-center flex flex-col items-center justify-center gap-3">
+                      <div className="bg-[#181926]/60 border border-white/10 p-10 rounded-3xl text-center flex flex-col items-center justify-center gap-3 backdrop-blur-md">
                         <CheckCircle2 size={36} className="text-green-400 opacity-60" />
-                        <h4 className="font-bold text-white text-md font-[font2]">No Pending Approvals</h4>
-                        <p className="text-zinc-400 text-xs leading-relaxed max-w-sm">
+                        <h4 className="font-bold text-white text-base font-[font2]">No Pending Approvals</h4>
+                        <p className="text-gray-400 text-xs leading-relaxed max-w-sm font-semibold">
                           {activeRun.status === 'completed'
                             ? 'All application forms successfully processed and submitted!'
                             : activeRun.status === 'running'
@@ -432,8 +409,8 @@ export default function AutomationCenterPage() {
                   </div>
 
                   {/* Right Col: Jobs Queue List */}
-                  <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-4 h-fit">
-                    <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-400 font-[font2]">Session Queue list</h3>
+                  <div className="bg-[#181926]/60 border border-white/10 p-5 rounded-3xl space-y-4 h-fit backdrop-blur-md">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 font-[font2]">Session Queue list</h3>
                     <div className="space-y-3">
                       {activeRun.jobs.map((job, idx) => (
                         <div
@@ -441,28 +418,27 @@ export default function AutomationCenterPage() {
                           className={`p-3 rounded-xl border transition-all ${
                             idx === activeRun.progress.currentIndex
                               ? 'bg-violet-950/20 border-violet-500/40 shadow shadow-violet-500/5'
-                              : 'bg-zinc-950/30 border-white/[0.03]'
+                              : 'bg-white/5 border-white/5'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="truncate flex-1">
                               <h4 className={`text-xs font-bold truncate ${
-                                idx === activeRun.progress.currentIndex ? 'text-violet-300' : 'text-zinc-300'
+                                idx === activeRun.progress.currentIndex ? 'text-[#a855f7]' : 'text-gray-300'
                               }`}>
                                 {job.jobInfo.title}
                               </h4>
-                              <p className="text-[10px] text-zinc-500 truncate mt-0.5">{job.jobInfo.company}</p>
+                              <p className="text-[10px] text-gray-500 truncate mt-0.5 font-semibold">{job.jobInfo.company}</p>
                             </div>
                             <span className="text-[10px] font-mono shrink-0 select-none">
                               {getJobStatusIcon(job.status)}
                             </span>
                           </div>
 
-                          {/* Skip/retry helper context button */}
                           {job.status === 'failed' && (
                             <button
                               onClick={() => retryJob(activeRun._id, idx)}
-                              className="mt-2 text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 transition-all"
+                              className="mt-2 text-[10px] text-[#a855f7] hover:text-[#c084fc] font-bold flex items-center gap-1 transition-all cursor-pointer"
                             >
                               <RefreshCw size={10} />
                               <span>Retry Automation</span>
@@ -483,23 +459,23 @@ export default function AutomationCenterPage() {
             <div className="space-y-6">
               {subLoading ? (
                 <div className="h-60 flex flex-col items-center justify-center gap-3">
-                  <RefreshCw className="animate-spin text-violet-400" size={32} />
-                  <p className="text-zinc-400 text-sm">Fetching past automation submissions records...</p>
+                  <RefreshCw className="animate-spin text-purple-400" size={32} />
+                  <p className="text-gray-400 text-xs font-semibold">Fetching past automation submissions records...</p>
                 </div>
               ) : submissions.length === 0 ? (
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-4 max-w-xl mx-auto">
-                  <Clock size={48} className="text-zinc-500 opacity-40" />
-                  <h3 className="text-xl font-bold font-[font2]">No Submissions Recorded</h3>
-                  <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
+                <div className="bg-[#181926]/60 border border-white/10 rounded-[32px] p-12 text-center flex flex-col items-center justify-center gap-4 max-w-xl mx-auto backdrop-blur-md">
+                  <Clock size={48} className="text-gray-500 opacity-60" />
+                  <h3 className="text-xl font-bold font-[font2] text-white">No Submissions Recorded</h3>
+                  <p className="text-gray-400 text-xs max-w-xs leading-relaxed font-semibold">
                     You haven't completed any automated job applications yet. Go through a run setup to capture AI intelligence cards.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center bg-white/5 border border-white/10 p-5 rounded-2xl">
+                  <div className="flex justify-between items-center bg-[#181926]/60 border border-white/10 p-5 rounded-2xl backdrop-blur-md">
                     <div>
-                      <h3 className="font-bold text-white text-lg font-[font2]">Submissions Record</h3>
-                      <p className="text-xs text-zinc-400 mt-0.5">
+                      <h3 className="font-bold text-white text-base font-[font2]">Submissions Record</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         Track AI-predicted shortlisting rates, key strengths alignment, and next action roadmaps.
                       </p>
                     </div>
@@ -523,7 +499,6 @@ export default function AutomationCenterPage() {
 
       </div>
 
-      {/* Review Modal Gateway */}
       <AutomationReviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
@@ -531,6 +506,6 @@ export default function AutomationCenterPage() {
         userEmail={userEmail}
         onConfirm={handleStartSmartApply}
       />
-    </div>
+    </DashboardLayout>
   );
 }

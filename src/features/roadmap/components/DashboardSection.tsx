@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Target, CheckCircle2, AlertCircle, Award, Sparkles, TrendingUp } from 'lucide-react';
+import { Target, CheckCircle2, AlertCircle, Award, Sparkles, TrendingUp, Lock } from 'lucide-react';
 import type { CareerRoadmap } from '../../../services/roadmapApi';
 
 interface DashboardSectionProps {
@@ -162,7 +162,7 @@ export default function DashboardSection({ roadmap }: DashboardSectionProps) {
                   </div>
                   {!isUnlocked && (
                     <div className="absolute top-2 right-2 text-gray-600">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <Lock size={12} />
                     </div>
                   )}
                 </div>

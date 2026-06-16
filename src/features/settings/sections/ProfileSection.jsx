@@ -42,6 +42,8 @@ const Linkedin = ({ size = 24, className, ...props }) => (
   </svg>
 );
 
+
+
 const DEFAULT_PROFILE = {
   fullName: '',
   email: '',

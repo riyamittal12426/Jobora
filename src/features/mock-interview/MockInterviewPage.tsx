@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2, AlertCircle, FileText } from 'lucide-react';
+import { Loader2, AlertCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InterviewSkeleton } from '@/components/ui/skeleton';
 import { SetupScreen } from './components/SetupScreen';
@@ -9,6 +9,7 @@ import { InterviewSession } from './components/InterviewSession';
 import { ResultsDashboard } from './components/ResultsDashboard';
 import { InterviewHistoryPanel } from './components/InterviewHistoryPanel';
 import { interviewApi } from '@/services/interviewApi';
+import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
 import type {
   FinalInterviewReport,
   InterviewHistoryItem,
@@ -133,18 +134,12 @@ export default function MockInterviewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft size={18} /> Dashboard
-          </Button>
-          <h1 className="text-lg font-bold font-[font2] text-indigo-200">AI Mock Interview</h1>
-          <div className="w-24" />
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-6 py-8">
+    <DashboardLayout
+      currentPage="mock-interview"
+      pageTitle="AI Mock Interview"
+      pageSubtitle="Practice coding and behavioral interviews with senior FAANG AI interviewers."
+    >
+      <div className="w-full">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -158,13 +153,15 @@ export default function MockInterviewPage() {
         {phase === 'loading' && <InterviewSkeleton />}
 
         {phase === 'no-resume' && (
-          <div className="mx-auto max-w-lg py-20 text-center">
-            <FileText size={48} className="mx-auto mb-4 text-indigo-400" />
-            <h2 className="text-2xl font-bold font-[font2]">Analyze Your Resume First</h2>
+          <div className="mx-auto max-w-lg py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-3xl backdrop-blur-md">
+            <FileText size={48} className="mx-auto mb-4 text-[#a855f7] opacity-80" />
+            <h2 className="text-2xl font-bold font-[font2] text-white">Analyze Your Resume First</h2>
             <p className="mt-3 text-gray-400">
               The mock interview generates personalized questions from your resume analysis. Complete resume analysis on the dashboard first.
             </p>
-            <Button className="mt-8" onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+            <Button className="mt-8 bg-[#7c3aed] text-white hover:bg-[#6d28d9] font-bold py-2.5 px-6 rounded-2xl" onClick={() => navigate('/dashboard')}>
+              Go to Dashboard
+            </Button>
           </div>
         )}
 
@@ -179,7 +176,7 @@ export default function MockInterviewPage() {
                 loading={phase === 'generating'}
               />
               {phase === 'generating' && (
-                <div className="mt-6 flex items-center justify-center gap-3 text-indigo-300">
+                <div className="mt-6 flex items-center justify-center gap-3 text-[#a855f7] font-bold text-sm">
                   <Loader2 className="animate-spin" size={20} />
                   Groq AI is crafting resume-specific questions...
                 </div>
@@ -209,6 +206,6 @@ export default function MockInterviewPage() {
           />
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -2,19 +2,18 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Sparkles, User, Briefcase, FileText, CheckCircle,
-  AlertCircle, Loader2, RefreshCw, Send, Plus, Trash2, ShieldAlert,
-  ExternalLink, Layers, History, Award, Check
+  Sparkles, User, Briefcase, FileText, CheckCircle,
+  AlertCircle, Loader2, RefreshCw, Plus, Trash2, ShieldAlert,
+  ExternalLink, Layers, History, Award, Check, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { autofillApi } from '@/services/autofillApi';
+import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
 import type {
   CandidateProfile,
   PreparedApplication,
-  AutofillAnswer,
   DetectedFormField
 } from '@/types/autofill';
 import type { JobListing } from '@/types/jobs';
@@ -240,7 +239,6 @@ export default function PrepareApplicationPage() {
     if (lowercaseKey.includes('github')) return prof.githubUrl;
     if (lowercaseKey.includes('portfolio') || lowercaseKey.includes('website')) return prof.portfolioUrl;
 
-    // Check custom screening questions
     const matchingAns = application.answers.find(a =>
       lowercaseKey.includes(a.fieldKey) ||
       a.fieldKey.includes(lowercaseKey) ||
@@ -252,70 +250,62 @@ export default function PrepareApplicationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060608] text-gray-200 font-[font1] relative overflow-x-hidden">
-      {/* Premium Glassmorphic Header */}
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-gray-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" className="text-gray-400 hover:text-white" onClick={() => navigate('/job-recommendations')}>
-              <ArrowLeft size={18} /> Recommendations
-            </Button>
-            <div className="h-6 w-px bg-white/10 hidden sm:block"></div>
-            <div>
-              <h1 className="text-lg font-bold text-violet-300 font-[font2] flex items-center gap-2">
-                <Sparkles size={16} className="text-violet-400 animate-pulse" />
-                AI Application Autofill Assistant
-              </h1>
-              <p className="text-xs text-gray-500">Simplify-style Form Mapping & Screening Answer Sandbox</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
+    <DashboardLayout
+      currentPage="prepare-application"
+      pageTitle="AI Application Autofill Assistant"
+      pageSubtitle="Draft custom answers, map web forms with crawler detection, and analyze recruiter scores."
+    >
+      <div className="w-full flex flex-col gap-6">
+        {/* Save Status and Header Action Row */}
+        <div className="flex justify-between items-center bg-[#181926]/60 border border-white/10 p-4 rounded-3xl backdrop-blur-md">
+          <div className="flex items-center gap-3 text-xs text-gray-400">
             {saveStatus === 'saving' && (
-              <span className="text-xs text-gray-500 flex items-center gap-1">
+              <span className="flex items-center gap-1 text-[#a855f7] font-semibold">
                 <Loader2 size={12} className="animate-spin" /> Saving changes...
               </span>
             )}
             {saveStatus === 'saved' && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
-                <Check size={12} /> Autosaved
+              <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                <Check size={12} /> Draft Autosaved
               </span>
             )}
-            {application && (
-              <Button
-                size="sm"
-                onClick={handleSaveAnswers}
-                className="bg-emerald-600 hover:bg-emerald-500 font-bold"
-              >
-                <CheckCircle size={16} className="mr-1.5" /> Save Application
-              </Button>
-            )}
+            {!saveStatus || (saveStatus === 'idle' && (
+              <span className="font-semibold text-gray-500">Autofill package ready for sandboxing.</span>
+            ))}
           </div>
-        </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        {/* Error Notification */}
+          {application && (
+            <Button
+              size="sm"
+              onClick={handleSaveAnswers}
+              className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold text-xs px-4 py-2 rounded-xl border border-[#7c3aed]/20"
+            >
+              <CheckCircle size={14} className="mr-1.5" /> Save Application
+            </Button>
+          )}
+        </div>
+
         {error && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-300">
+          <div className="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-300">
             <AlertCircle size={18} className="flex-shrink-0" />
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError(null)} className="text-xs underline hover:text-white">Dismiss</button>
+            <button onClick={() => setError(null)} className="text-xs underline hover:text-white cursor-pointer">Dismiss</button>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* LEFT SIDEBAR: Active Job & History (4 Cols) */}
           <aside className="lg:col-span-4 space-y-6">
+            
             {/* Active Job Information */}
             {application ? (
-              <Card className="bg-white/5 border-white/5 backdrop-blur-xl relative overflow-hidden">
+              <Card className="bg-[#181926]/60 border-white/10 backdrop-blur-xl relative overflow-hidden rounded-[28px] p-5 shadow-lg">
                 <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none">
                   <Briefcase size={96} />
                 </div>
-                <CardHeader className="pb-4">
+                <CardHeader className="p-0 pb-4">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-violet-500/20 text-violet-300 border border-violet-500/30">Target Role</Badge>
+                    <Badge className="bg-[#7c3aed]/20 text-[#a78bfa] border border-[#7c3aed]/30">Target Role</Badge>
                     <Badge variant={application.status === 'Draft' ? 'outline' : 'success'}>
                       {application.status}
                     </Badge>
@@ -327,8 +317,8 @@ export default function PrepareApplicationPage() {
                     {application.jobInfo.company} · {application.jobInfo.location || 'Remote'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-xs text-gray-500 line-clamp-3">
+                <CardContent className="p-0 space-y-4">
+                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">
                     {application.jobInfo.description}
                   </p>
                   {application.jobInfo.applyLink && (
@@ -336,7 +326,7 @@ export default function PrepareApplicationPage() {
                       href={application.jobInfo.applyLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/20 py-2.5 text-xs font-semibold text-white hover:bg-indigo-600/50 transition-all"
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-white/5 border border-white/10 py-2.5 text-xs font-bold text-white hover:bg-white/10 transition-all"
                     >
                       View Original Job <ExternalLink size={12} />
                     </a>
@@ -344,37 +334,37 @@ export default function PrepareApplicationPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-white/5 border-white/5 p-6 text-center text-gray-500">
+              <Card className="bg-[#181926]/60 border-white/10 p-6 text-center text-gray-500 rounded-[28px]">
                 <Briefcase size={32} className="mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No target job selected. Choose from history or prepare from recommendations.</p>
+                <p className="text-xs font-semibold">No target job selected. Choose from history or prepare from matches.</p>
               </Card>
             )}
 
             {/* Playwright Portal Scanner */}
-            <Card className="bg-white/5 border-white/5 backdrop-blur-xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-md font-bold font-[font2] text-white flex items-center gap-2">
-                  <Layers size={16} className="text-indigo-400" />
+            <Card className="bg-[#181926]/60 border-white/10 backdrop-blur-xl rounded-[28px] p-5 shadow-lg">
+              <CardHeader className="p-0 pb-3">
+                <CardTitle className="text-sm font-bold font-[font2] text-white flex items-center gap-2">
+                  <Layers size={16} className="text-[#a855f7]" />
                   Form Scanner (Playwright)
                 </CardTitle>
                 <CardDescription className="text-xs text-gray-400">
                   Enter a Greenhouse/Lever link to map custom application portal fields automatically.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <form onSubmit={handleDetectFields} className="space-y-3">
                   <input
                     type="url"
                     placeholder="https://boards.greenhouse.io/..."
                     value={detectUrl}
                     onChange={(e) => setDetectUrl(e.target.value)}
-                    className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#7c3aed]"
                   />
                   <Button
                     type="submit"
                     size="sm"
                     disabled={scanningUrl || !detectUrl}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-xs font-bold font-[font2]"
+                    className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white hover:text-white border-0 text-xs font-bold font-[font2] py-2.5 rounded-xl transition-all border border-[#7c3aed]/20"
                   >
                     {scanningUrl ? (
                       <><Loader2 size={12} className="animate-spin mr-1.5" /> Launching Crawler...</>
@@ -386,14 +376,14 @@ export default function PrepareApplicationPage() {
 
                 {detectedFields.length > 0 && (
                   <div className="mt-4 border-t border-white/5 pt-3">
-                    <span className="text-xs text-gray-400 block mb-2 font-medium">
-                      Detected Fields ({detectedFields.length}) - Portal: <span className="text-violet-300 font-bold uppercase">{detectedPortal}</span>
+                    <span className="text-[10px] text-gray-400 block mb-2 font-bold uppercase tracking-wider">
+                      Detected Fields ({detectedFields.length}) - Portal: <span className="text-[#a855f7] font-extrabold uppercase">{detectedPortal}</span>
                     </span>
                     <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-hide pr-1">
                       {detectedFields.map((f, i) => (
-                        <div key={i} className="flex justify-between items-center bg-white/5 border border-white/5 px-2 py-1.5 rounded-lg text-[10px]">
+                        <div key={i} className="flex justify-between items-center bg-white/5 border border-white/5 px-2.5 py-1.5 rounded-lg text-[10px]">
                           <span className="text-gray-300 truncate max-w-[150px] font-medium">{f.label || f.name}</span>
-                          <Badge variant={f.required ? 'warning' : 'outline'} className="scale-90 select-none">
+                          <Badge className="scale-90 select-none bg-white/10 text-white border-0">
                             {f.type} {f.required && '*'}
                           </Badge>
                         </div>
@@ -405,10 +395,10 @@ export default function PrepareApplicationPage() {
             </Card>
 
             {/* Application Preparation History */}
-            <Card className="bg-white/5 border-white/5 backdrop-blur-xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-md font-bold font-[font2] text-white flex items-center gap-2">
-                  <History size={16} className="text-emerald-400" />
+            <Card className="bg-[#181926]/60 border-white/10 backdrop-blur-xl rounded-[28px] p-5 shadow-lg">
+              <CardHeader className="p-0 pb-3">
+                <CardTitle className="text-sm font-bold font-[font2] text-white flex items-center gap-2">
+                  <History size={16} className="text-purple-400" />
                   Application Sandbox History
                 </CardTitle>
                 <CardDescription className="text-xs text-gray-400">
@@ -418,10 +408,10 @@ export default function PrepareApplicationPage() {
               <CardContent className="p-0">
                 {loadingHistory ? (
                   <div className="py-8 text-center">
-                    <Loader2 size={24} className="animate-spin text-emerald-400 mx-auto" />
+                    <Loader2 size={24} className="animate-spin text-[#a855f7] mx-auto" />
                   </div>
                 ) : history.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-gray-500">
+                  <div className="py-6 text-center text-xs text-gray-500 font-semibold">
                     No application packages stored yet.
                   </div>
                 ) : (
@@ -430,8 +420,8 @@ export default function PrepareApplicationPage() {
                       <button
                         key={appItem._id}
                         onClick={() => handleSelectApp(appItem._id)}
-                        className={`w-full text-left p-4 hover:bg-white/5 flex flex-col gap-1 transition-colors ${
-                          application?._id === appItem._id ? 'bg-white/5 border-l-2 border-emerald-500' : ''
+                        className={`w-full text-left py-3.5 px-3.5 hover:bg-white/5 flex flex-col gap-1 transition-colors rounded-xl ${
+                          application?._id === appItem._id ? 'bg-white/5 border-l-2 border-[#7c3aed]' : ''
                         }`}
                       >
                         <div className="flex justify-between items-start">
@@ -442,11 +432,11 @@ export default function PrepareApplicationPage() {
                             {new Date(appItem.updatedAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <span className="text-[10px] text-gray-400 font-medium">
+                        <span className="text-[10px] text-gray-400 font-semibold">
                           {appItem.jobInfo.company}
                         </span>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <Badge variant="outline" className="scale-75 origin-left select-none">
+                          <Badge className="scale-75 origin-left select-none bg-white/10 border-0 text-white">
                             {appItem.answers.length} Answers
                           </Badge>
                           <Badge variant={appItem.recruiterReview.interviewProbability === 'High' ? 'success' : 'outline'} className="scale-75 origin-left select-none">
@@ -463,44 +453,45 @@ export default function PrepareApplicationPage() {
 
           {/* RIGHT WORKSPACE: Tabs Content (8 Cols) */}
           <main className="lg:col-span-8 space-y-6">
+            
             {/* Nav Tabs */}
-            <div className="flex border-b border-white/5 overflow-x-auto gap-2 pb-1 scrollbar-hide">
+            <div className="flex border-b border-white/10 overflow-x-auto gap-2 pb-1.5 scrollbar-hide">
               <button
                 onClick={() => setActiveTab('qa')}
-                className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === 'qa' ? 'border-violet-500 text-violet-300 font-bold' : 'border-transparent text-gray-400 hover:text-white'
+                className={`pb-3 px-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'qa' ? 'text-[#a855f7] border-b-2 border-[#a855f7]' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Sparkles size={14} /> Screening Answers
               </button>
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === 'profile' ? 'border-violet-500 text-violet-300 font-bold' : 'border-transparent text-gray-400 hover:text-white'
+                className={`pb-3 px-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'profile' ? 'text-[#a855f7] border-b-2 border-[#a855f7]' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <User size={14} /> Candidate Profile
               </button>
               <button
                 onClick={() => setActiveTab('cover')}
-                className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === 'cover' ? 'border-violet-500 text-violet-300 font-bold' : 'border-transparent text-gray-400 hover:text-white'
+                className={`pb-3 px-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'cover' ? 'text-[#a855f7] border-b-2 border-[#a855f7]' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <FileText size={14} /> Cover Letter
               </button>
               <button
                 onClick={() => setActiveTab('preview')}
-                className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === 'preview' ? 'border-violet-500 text-violet-300 font-bold' : 'border-transparent text-gray-400 hover:text-white'
+                className={`pb-3 px-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'preview' ? 'text-[#a855f7] border-b-2 border-[#a855f7]' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Layers size={14} /> Mock Form Preview
               </button>
               <button
                 onClick={() => setActiveTab('recruiter')}
-                className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === 'recruiter' ? 'border-violet-500 text-violet-300 font-bold' : 'border-transparent text-gray-400 hover:text-white'
+                className={`pb-3 px-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'recruiter' ? 'text-[#a855f7] border-b-2 border-[#a855f7]' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Award size={14} /> Recruiter Predictions
@@ -510,19 +501,19 @@ export default function PrepareApplicationPage() {
             {/* Tab Contents */}
             <div className="min-h-[500px]">
               {generatingApp && (
-                <div className="py-24 text-center space-y-4 bg-white/5 border border-white/5 rounded-2xl p-8">
-                  <Loader2 size={40} className="animate-spin text-violet-400 mx-auto" />
-                  <h3 className="text-lg font-bold text-violet-200 font-[font2]">Analyzing Application Requirements...</h3>
-                  <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                <div className="py-24 text-center space-y-4 bg-[#181926]/60 border border-white/10 rounded-2xl p-8 backdrop-blur-md">
+                  <Loader2 size={40} className="animate-spin text-purple-400 mx-auto" />
+                  <h3 className="text-lg font-bold text-white font-[font2]">Analyzing Application Requirements...</h3>
+                  <p className="text-xs text-gray-400 max-w-sm mx-auto">
                     Groq is evaluating target skills, framing professional screening answers from your resume snapshot, and writing a cover letter.
                   </p>
                 </div>
               )}
 
               {!generatingApp && loadingApp && (
-                <div className="py-24 text-center bg-white/5 border border-white/5 rounded-2xl p-8">
+                <div className="py-24 text-center bg-[#181926]/60 border border-white/10 rounded-2xl p-8 backdrop-blur-md">
                   <Loader2 size={30} className="animate-spin text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Loading saved application draft...</p>
+                  <p className="text-xs font-semibold text-gray-400">Loading saved application draft...</p>
                 </div>
               )}
 
@@ -531,14 +522,14 @@ export default function PrepareApplicationPage() {
                 <div className="space-y-6">
                   {application ? (
                     <>
-                      <div className="flex justify-between items-center bg-violet-950/20 border border-violet-500/20 p-4 rounded-xl text-xs text-violet-200">
-                        <span className="font-medium">
-                          These answers are drafted by Groq based on your extracted Candidate Profile. Double-check and customize them.
+                      <div className="flex justify-between items-center bg-[#7c3aed]/10 border border-[#7c3aed]/30 p-4 rounded-2xl text-xs text-gray-200">
+                        <span className="font-semibold">
+                          These answers are drafted by Groq based on your Candidate Profile snapshot. Double-check and customize them.
                         </span>
                         <Button
                           size="sm"
                           onClick={handleSaveAnswers}
-                          className="bg-violet-600 hover:bg-violet-500 font-bold text-[10px] py-1 h-7"
+                          className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold text-[10px] py-1.5 h-8 px-4 rounded-xl cursor-pointer border border-[#7c3aed]/20"
                         >
                           Save Draft
                         </Button>
@@ -546,46 +537,46 @@ export default function PrepareApplicationPage() {
 
                       <div className="space-y-6">
                         {application.answers.map((item, idx) => (
-                          <Card key={idx} className="bg-white/5 border-white/5">
-                            <CardHeader className="pb-2">
+                          <Card key={idx} className="bg-[#181926]/60 border-white/10 rounded-2xl p-5 shadow-md">
+                            <CardHeader className="p-0 pb-3">
                               <div className="flex justify-between items-start gap-4">
-                                <h3 className="text-sm font-bold text-white font-[font2]">
+                                <h3 className="text-sm font-bold text-white font-[font2] leading-snug">
                                   {idx + 1}. {item.question}
                                 </h3>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-gray-500">Confidence</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Confidence</span>
                                   <Badge className={
-                                    item.confidenceScore >= 85 ? 'bg-emerald-500/20 text-emerald-300' :
-                                    item.confidenceScore >= 70 ? 'bg-yellow-500/20 text-yellow-300' :
-                                    'bg-red-500/20 text-red-300'
+                                    item.confidenceScore >= 85 ? 'bg-emerald-500/20 text-emerald-300 border-0' :
+                                    item.confidenceScore >= 70 ? 'bg-yellow-500/20 text-yellow-300 border-0' :
+                                    'bg-red-500/20 text-red-300 border-0'
                                   }>
                                     {item.confidenceScore}%
                                   </Badge>
                                 </div>
                               </div>
-                              <p className="text-[10px] text-gray-400 italic">
-                                Field Key Mapping: <span className="font-semibold text-indigo-300">{item.fieldKey}</span>
+                              <p className="text-[10px] text-gray-500 font-bold mt-1">
+                                Field Key Mapping: <span className="font-extrabold text-purple-300">{item.fieldKey}</span>
                               </p>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="p-0 space-y-4">
                               <textarea
                                 value={item.answer}
                                 onChange={(e) => handleAnswerChange(idx, e.target.value)}
                                 rows={4}
-                                className="w-full p-3 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-violet-500"
+                                className="w-full p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#7c3aed] leading-relaxed"
                               />
 
-                              <div className="flex justify-between items-center gap-4 text-[10px] text-gray-500">
+                              <div className="flex justify-between items-center gap-4 text-[10px] text-gray-400">
                                 <div className="flex items-center gap-1.5 flex-1 max-w-[80%]">
                                   <CheckCircle size={12} className="text-emerald-400 flex-shrink-0" />
-                                  <span className="truncate">{item.explanation}</span>
+                                  <span className="truncate font-semibold">{item.explanation}</span>
                                 </div>
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   disabled={regeneratingItem !== null}
                                   onClick={() => handleRegenerate('answer', item.fieldKey)}
-                                  className="text-violet-400 hover:text-violet-300 text-[10px] h-6 px-2 flex items-center gap-1"
+                                  className="text-[#a855f7] hover:text-white hover:bg-white/5 text-[10px] h-7 px-3 rounded-lg flex items-center gap-1 cursor-pointer border border-[#a855f7]/20"
                                 >
                                   {regeneratingItem === item.fieldKey ? (
                                     <><Loader2 size={10} className="animate-spin" /> Regenerating...</>
@@ -600,8 +591,8 @@ export default function PrepareApplicationPage() {
                       </div>
                     </>
                   ) : (
-                    <div className="py-20 text-center bg-white/5 border border-white/5 rounded-2xl text-gray-500">
-                      <Sparkles size={40} className="mx-auto mb-4 text-violet-400 opacity-40 animate-pulse" />
+                    <div className="py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-[32px] text-gray-400 backdrop-blur-md">
+                      <Sparkles size={40} className="mx-auto mb-4 text-[#a855f7] opacity-60 animate-pulse" />
                       <h3 className="text-md font-bold text-white font-[font2] mb-1">Prepare Application Package</h3>
                       <p className="text-xs max-w-xs mx-auto mb-6">
                         No active application package loaded. Select a recommended job to prepare a custom application draft.
@@ -615,11 +606,11 @@ export default function PrepareApplicationPage() {
               {!generatingApp && !loadingApp && activeTab === 'profile' && (
                 <div className="space-y-6">
                   {profile ? (
-                    <Card className="bg-white/5 border-white/5">
-                      <CardHeader className="pb-4 border-b border-white/5 flex flex-row items-center justify-between">
+                    <Card className="bg-[#181926]/60 border-white/10 rounded-2xl p-5 shadow-md">
+                      <CardHeader className="p-0 pb-4 border-b border-white/5 flex flex-row items-center justify-between flex-wrap gap-3">
                         <div>
                           <CardTitle className="text-lg font-bold font-[font2] text-white">Extracted Candidate Profile</CardTitle>
-                          <CardDescription className="text-xs text-gray-400">
+                          <CardDescription className="text-xs text-gray-400 mt-0.5">
                             Verify and maintain the profile used to populate applications and screening forms.
                           </CardDescription>
                         </div>
@@ -627,7 +618,7 @@ export default function PrepareApplicationPage() {
                           size="sm"
                           disabled={extractingProfile}
                           onClick={handleExtractProfile}
-                          className="bg-indigo-600 hover:bg-indigo-500 font-bold text-xs"
+                          className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white hover:text-white border-0 font-extrabold text-xs rounded-xl px-4 py-2 cursor-pointer border border-[#7c3aed]/20"
                         >
                           {extractingProfile ? (
                             <><Loader2 size={12} className="animate-spin mr-1" /> Parsing Resume...</>
@@ -636,7 +627,7 @@ export default function PrepareApplicationPage() {
                           )}
                         </Button>
                       </CardHeader>
-                      <CardContent className="space-y-6 pt-6">
+                      <CardContent className="p-0 space-y-6 pt-6">
                         {/* Profile Basic Info */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
@@ -645,7 +636,7 @@ export default function PrepareApplicationPage() {
                               type="text"
                               value={profile.name}
                               onChange={(e) => handleUpdateProfile({ ...profile, name: e.target.value })}
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                           <div>
@@ -654,7 +645,7 @@ export default function PrepareApplicationPage() {
                               type="email"
                               value={profile.email}
                               onChange={(e) => handleUpdateProfile({ ...profile, email: e.target.value })}
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                           <div>
@@ -663,7 +654,7 @@ export default function PrepareApplicationPage() {
                               type="text"
                               value={profile.phone}
                               onChange={(e) => handleUpdateProfile({ ...profile, phone: e.target.value })}
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                         </div>
@@ -674,30 +665,30 @@ export default function PrepareApplicationPage() {
                             <label className="block text-gray-400 mb-1 text-[10px] uppercase font-bold tracking-wider">LinkedIn URL</label>
                             <input
                               type="url"
-                              value={profile.linkedinUrl}
+                              value={profile.linkedinUrl || ''}
                               onChange={(e) => handleUpdateProfile({ ...profile, linkedinUrl: e.target.value })}
                               placeholder="https://linkedin.com/in/..."
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                           <div>
                             <label className="block text-gray-400 mb-1 text-[10px] uppercase font-bold tracking-wider">GitHub URL</label>
                             <input
                               type="url"
-                              value={profile.githubUrl}
+                              value={profile.githubUrl || ''}
                               onChange={(e) => handleUpdateProfile({ ...profile, githubUrl: e.target.value })}
                               placeholder="https://github.com/..."
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                           <div>
                             <label className="block text-gray-400 mb-1 text-[10px] uppercase font-bold tracking-wider">Portfolio/Website URL</label>
                             <input
                               type="url"
-                              value={profile.portfolioUrl}
+                              value={profile.portfolioUrl || ''}
                               onChange={(e) => handleUpdateProfile({ ...profile, portfolioUrl: e.target.value })}
                               placeholder="https://yoursite.com"
-                              className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                              className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                             />
                           </div>
                         </div>
@@ -712,7 +703,7 @@ export default function PrepareApplicationPage() {
                               ...profile,
                               skills: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
                             })}
-                            className="w-full p-2.5 bg-gray-900/60 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                            className="w-full p-2.5 bg-white/5 rounded-xl border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                           />
                         </div>
 
@@ -723,13 +714,13 @@ export default function PrepareApplicationPage() {
                           </span>
                           <div className="space-y-4">
                             {profile.experience.map((exp, expIdx) => (
-                              <div key={expIdx} className="bg-gray-900/30 border border-white/5 p-4 rounded-xl space-y-3 relative">
+                              <div key={expIdx} className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3 relative">
                                 <button
                                   onClick={() => {
                                     const updatedExp = profile.experience.filter((_, idx) => idx !== expIdx);
                                     handleUpdateProfile({ ...profile, experience: updatedExp });
                                   }}
-                                  className="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition-colors"
+                                  className="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition-colors cursor-pointer"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -743,7 +734,7 @@ export default function PrepareApplicationPage() {
                                       updatedExp[expIdx].company = e.target.value;
                                       handleUpdateProfile({ ...profile, experience: updatedExp });
                                     }}
-                                    className="p-2 bg-gray-900/60 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                                    className="p-2 bg-white/5 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                                   />
                                   <input
                                     type="text"
@@ -754,7 +745,7 @@ export default function PrepareApplicationPage() {
                                       updatedExp[expIdx].role = e.target.value;
                                       handleUpdateProfile({ ...profile, experience: updatedExp });
                                     }}
-                                    className="p-2 bg-gray-900/60 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                                    className="p-2 bg-white/5 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                                   />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -767,7 +758,7 @@ export default function PrepareApplicationPage() {
                                       updatedExp[expIdx].startDate = e.target.value;
                                       handleUpdateProfile({ ...profile, experience: updatedExp });
                                     }}
-                                    className="p-2 bg-gray-900/60 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                                    className="p-2 bg-white/5 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                                   />
                                   <input
                                     type="text"
@@ -778,7 +769,7 @@ export default function PrepareApplicationPage() {
                                       updatedExp[expIdx].endDate = e.target.value;
                                       handleUpdateProfile({ ...profile, experience: updatedExp });
                                     }}
-                                    className="p-2 bg-gray-900/60 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                                    className="p-2 bg-white/5 rounded-lg border border-white/10 text-xs text-white focus:outline-none focus:border-[#7c3aed]"
                                   />
                                 </div>
                                 <textarea
@@ -790,7 +781,7 @@ export default function PrepareApplicationPage() {
                                     handleUpdateProfile({ ...profile, experience: updatedExp });
                                   }}
                                   rows={2}
-                                  className="w-full p-2.5 bg-gray-900/60 rounded-lg border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-indigo-500"
+                                  className="w-full p-2.5 bg-white/5 rounded-lg border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-[#7c3aed] leading-normal"
                                 />
                               </div>
                             ))}
@@ -801,7 +792,7 @@ export default function PrepareApplicationPage() {
                                 const newExp = [...profile.experience, { company: '', role: '', description: '', startDate: '', endDate: '' }];
                                 handleUpdateProfile({ ...profile, experience: newExp });
                               }}
-                              className="text-xs flex items-center gap-1.5"
+                              className="text-xs flex items-center gap-1.5 bg-white/5 border-white/10 hover:bg-white/10 rounded-xl cursor-pointer"
                             >
                               <Plus size={12} /> Add Experience Record
                             </Button>
@@ -810,7 +801,7 @@ export default function PrepareApplicationPage() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="py-20 text-center bg-white/5 rounded-2xl">
+                    <div className="py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-[32px]">
                       <Loader2 size={30} className="animate-spin text-gray-400 mx-auto" />
                     </div>
                   )}
@@ -821,11 +812,11 @@ export default function PrepareApplicationPage() {
               {!generatingApp && !loadingApp && activeTab === 'cover' && (
                 <div className="space-y-6">
                   {application ? (
-                    <Card className="bg-white/5 border-white/5">
-                      <CardHeader className="pb-4 border-b border-white/5 flex flex-row justify-between items-center">
+                    <Card className="bg-[#181926]/60 border-white/10 rounded-2xl p-5 shadow-md">
+                      <CardHeader className="p-0 pb-4 border-b border-white/5 flex flex-row justify-between items-center flex-wrap gap-2">
                         <div>
                           <CardTitle className="text-lg font-bold font-[font2] text-white">Generated Cover Letter</CardTitle>
-                          <CardDescription className="text-xs text-gray-400">
+                          <CardDescription className="text-xs text-gray-400 mt-0.5">
                             A customized letter highlighting relevant resume points matching this role.
                           </CardDescription>
                         </div>
@@ -834,7 +825,7 @@ export default function PrepareApplicationPage() {
                           size="sm"
                           disabled={regeneratingItem === 'cover'}
                           onClick={() => handleRegenerate('cover_letter')}
-                          className="text-xs"
+                          className="text-xs bg-white/5 border-white/10 hover:bg-white/10 rounded-xl px-4 py-2 cursor-pointer flex items-center gap-1.5"
                         >
                           {regeneratingItem === 'cover' ? (
                             <><Loader2 size={12} className="animate-spin mr-1.5" /> Rewriting...</>
@@ -843,17 +834,17 @@ export default function PrepareApplicationPage() {
                           )}
                         </Button>
                       </CardHeader>
-                      <CardContent className="pt-6">
+                      <CardContent className="p-0 pt-6">
                         <textarea
                           value={application.coverLetter}
                           onChange={(e) => handleCoverLetterChange(e.target.value)}
                           rows={18}
-                          className="w-full p-4 bg-gray-900/50 rounded-xl border border-white/10 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-violet-500 font-mono leading-relaxed"
+                          className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#7c3aed] font-mono leading-relaxed"
                         />
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="py-20 text-center bg-white/5 rounded-2xl text-gray-500">
+                    <div className="py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-[32px] text-gray-400 font-semibold backdrop-blur-md">
                       Select a job listing to prepare application cover letters.
                     </div>
                   )}
@@ -864,9 +855,9 @@ export default function PrepareApplicationPage() {
               {!generatingApp && !loadingApp && activeTab === 'preview' && (
                 <div className="space-y-6">
                   {application ? (
-                    <div className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-xl">
+                    <div className="bg-[#181926]/60 border border-white/10 rounded-[28px] overflow-hidden backdrop-blur-xl shadow-lg">
                       {/* Fake Portal Bar */}
-                      <div className="bg-gray-900/80 border-b border-white/5 px-6 py-4 flex items-center justify-between">
+                      <div className="bg-white/5 border-b border-white/5 px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="flex gap-1.5">
                             <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
@@ -882,34 +873,33 @@ export default function PrepareApplicationPage() {
                         </Badge>
                       </div>
 
-                      {/* Fake Form Content (Lever/Greenhouse Style) */}
+                      {/* Fake Form Content */}
                       <div className="p-6 md:p-8 space-y-6 max-w-2xl mx-auto">
                         <div className="border-b border-white/5 pb-4 mb-6">
                           <h2 className="text-xl font-bold font-[font2] text-white">Apply for this Position</h2>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             Review how the Form Mapping Engine fills the required elements on external application boards.
                           </p>
                         </div>
 
-                        {/* Standard/Detected Fields rendering */}
                         <div className="space-y-5">
-                          {/* Resume Upload Area */}
-                          <div className="space-y-2 relative border border-dashed border-white/10 rounded-xl p-4 bg-gray-900/20 flex flex-col items-center">
-                            <div className="absolute top-3 right-3 text-emerald-400 flex items-center gap-1 text-[10px]">
+                          {/* Resume */}
+                          <div className="space-y-2 relative border border-dashed border-white/20 rounded-2xl p-4 bg-white/5 flex flex-col items-center">
+                            <div className="absolute top-3 right-3 text-emerald-400 flex items-center gap-1 text-[10px] font-semibold">
                               <Sparkles size={10} /> Auto-Attached
                             </div>
-                            <FileText size={24} className="text-indigo-400 mb-1" />
-                            <span className="text-xs font-semibold text-white">
+                            <FileText size={24} className="text-[#a855f7] mb-1" />
+                            <span className="text-xs font-bold text-white">
                               {application.candidateProfileSnapshot.name.replace(/\s+/g, '_')}_Resume.pdf
                             </span>
-                            <span className="text-[10px] text-gray-500">
+                            <span className="text-[10px] text-gray-500 font-semibold">
                               Attached from system files ({application.candidateProfileSnapshot.resumeUrl ? 'Cloud Storage' : 'Linked'})
                             </span>
                           </div>
 
                           {/* Full Name */}
                           <div className="space-y-1 relative">
-                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                               <Sparkles size={10} /> Mapped
                             </div>
                             <label className="block text-xs text-gray-300 font-semibold">
@@ -919,14 +909,14 @@ export default function PrepareApplicationPage() {
                               type="text"
                               readOnly
                               value={getMappedValue('name')}
-                              className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
+                              className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
                             />
                           </div>
 
-                          {/* Email & Phone grid */}
+                          {/* Email & Phone */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1 relative">
-                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                                 <Sparkles size={10} /> Mapped
                               </div>
                               <label className="block text-xs text-gray-300 font-semibold">
@@ -936,11 +926,11 @@ export default function PrepareApplicationPage() {
                                 type="text"
                                 readOnly
                                 value={getMappedValue('email')}
-                                className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
+                                className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
                               />
                             </div>
                             <div className="space-y-1 relative">
-                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                                 <Sparkles size={10} /> Mapped
                               </div>
                               <label className="block text-xs text-gray-300 font-semibold">
@@ -950,14 +940,14 @@ export default function PrepareApplicationPage() {
                                 type="text"
                                 readOnly
                                 value={getMappedValue('phone')}
-                                className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
+                                className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
                               />
                             </div>
                           </div>
 
                           {/* Social links */}
                           <div className="space-y-1 relative">
-                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                               <Sparkles size={10} /> Mapped
                             </div>
                             <label className="block text-xs text-gray-300 font-semibold">LinkedIn Profile URL</label>
@@ -965,12 +955,12 @@ export default function PrepareApplicationPage() {
                               type="text"
                               readOnly
                               value={getMappedValue('linkedin')}
-                              className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
+                              className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
                             />
                           </div>
 
                           <div className="space-y-1 relative">
-                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                            <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                               <Sparkles size={10} /> Mapped
                             </div>
                             <label className="block text-xs text-gray-300 font-semibold">GitHub Profile URL</label>
@@ -978,14 +968,14 @@ export default function PrepareApplicationPage() {
                               type="text"
                               readOnly
                               value={getMappedValue('github')}
-                              className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
+                              className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default font-medium"
                             />
                           </div>
 
-                          {/* Custom Generated Answers */}
+                          {/* Custom Questions */}
                           {application.answers.map((item, index) => (
                             <div key={index} className="space-y-1 relative">
-                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none">
+                              <div className="absolute top-9 right-3 text-emerald-400 flex items-center gap-1 text-[9px] select-none pointer-events-none font-bold">
                                 <Sparkles size={10} /> AI Generated
                               </div>
                               <label className="block text-xs text-gray-300 font-semibold">
@@ -995,17 +985,16 @@ export default function PrepareApplicationPage() {
                                 readOnly
                                 rows={3}
                                 value={item.answer}
-                                className="w-full p-3 bg-gray-900/40 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default leading-relaxed"
+                                className="w-full p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-gray-300 focus:outline-none cursor-default leading-relaxed font-medium"
                               />
                             </div>
                           ))}
                         </div>
 
-                        {/* Submit Button Placeholder */}
                         <div className="pt-6 border-t border-white/5 mt-8 flex justify-center">
                           <Button
                             disabled
-                            className="bg-indigo-600/35 border border-indigo-500/25 text-white/50 text-xs px-8 cursor-not-allowed font-[font2]"
+                            className="bg-white/5 border border-white/10 text-white/40 text-xs px-8 cursor-not-allowed font-[font2] rounded-xl"
                           >
                             Submit Application (Mock Mode Only)
                           </Button>
@@ -1013,7 +1002,7 @@ export default function PrepareApplicationPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="py-20 text-center bg-white/5 rounded-2xl text-gray-500">
+                    <div className="py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-[32px] text-gray-400 backdrop-blur-md">
                       No active application mock setup. Select a job recommendation.
                     </div>
                   )}
@@ -1025,36 +1014,34 @@ export default function PrepareApplicationPage() {
                 <div className="space-y-6">
                   {application ? (
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                      {/* Left Block: Match Analytics (5 Cols) */}
-                      <Card className="md:col-span-5 bg-white/5 border-white/5 flex flex-col justify-between">
-                        <CardHeader className="pb-3 border-b border-white/5">
+                      {/* Left: Match score card */}
+                      <Card className="md:col-span-5 bg-[#181926]/60 border-white/10 rounded-2xl p-5 shadow-md flex flex-col justify-between backdrop-blur-md">
+                        <CardHeader className="p-0 pb-3 border-b border-white/5">
                           <CardTitle className="text-md font-bold font-[font2] text-white">Recruiter Alignment</CardTitle>
-                          <CardDescription className="text-xs text-gray-400">
+                          <CardDescription className="text-xs text-gray-400 mt-0.5">
                             Groq AI estimation of overall profile alignment.
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="py-8 space-y-6 flex-1 flex flex-col justify-center">
-                          {/* Round Score display */}
+                        <CardContent className="p-0 py-8 space-y-6 flex-1 flex flex-col justify-center">
                           <div className="text-center">
-                            <span className="text-[10px] text-gray-500 font-medium block uppercase tracking-wider mb-1">
+                            <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider mb-2">
                               Predicted Match Score
                             </span>
-                            <div className="inline-flex items-center justify-center p-1 rounded-full bg-violet-950/20 border border-violet-500/20 w-28 h-28">
+                            <div className="inline-flex items-center justify-center p-1 rounded-full bg-violet-950/20 border border-violet-500/20 w-28 h-28 shadow-inner shadow-violet-500/10">
                               <span className="text-3xl font-extrabold text-white font-[font2]">
                                 {application.recruiterReview.matchScore}%
                               </span>
                             </div>
                           </div>
 
-                          {/* Probability Indicator */}
                           <div className="text-center">
-                            <span className="text-[10px] text-gray-500 font-medium block uppercase tracking-wider mb-2">
+                            <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider mb-2">
                               Interview Probability
                             </span>
-                            <Badge className={`px-4 py-1.5 text-xs font-bold font-[font2] border select-none ${
-                              application.recruiterReview.interviewProbability === 'High' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
-                              application.recruiterReview.interviewProbability === 'Medium' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
-                              'bg-red-500/20 text-red-300 border-red-500/40'
+                            <Badge className={`px-4 py-1.5 text-xs font-bold font-[font2] border select-none border-0 ${
+                              application.recruiterReview.interviewProbability === 'High' ? 'bg-emerald-500/20 text-emerald-300' :
+                              application.recruiterReview.interviewProbability === 'Medium' ? 'bg-yellow-500/20 text-yellow-300' :
+                              'bg-red-500/20 text-red-300'
                             }`}>
                               {application.recruiterReview.interviewProbability} Probability
                             </Badge>
@@ -1062,36 +1049,34 @@ export default function PrepareApplicationPage() {
                         </CardContent>
                       </Card>
 
-                      {/* Right Block: Feedback Analysis (7 Cols) */}
+                      {/* Right: Feedback logs */}
                       <div className="md:col-span-7 space-y-6">
-                        {/* Predicted Reaction */}
-                        <Card className="bg-white/5 border-white/5">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                        <Card className="bg-[#181926]/60 border-white/10 rounded-2xl p-5 shadow-md backdrop-blur-md">
+                          <CardHeader className="p-0 pb-2">
+                            <CardTitle className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                               Predicted Recruiter Reaction
                             </CardTitle>
                           </CardHeader>
-                          <CardContent>
-                            <p className="text-xs text-gray-200 leading-relaxed">
+                          <CardContent className="p-0 mt-1">
+                            <p className="text-xs text-gray-200 leading-relaxed font-semibold">
                               {application.recruiterReview.predictedReaction}
                             </p>
                           </CardContent>
                         </Card>
 
-                        {/* Strengths & Red Flags */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {/* Key Strengths */}
-                          <Card className="bg-white/5 border-white/5">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider flex items-center gap-1">
-                                <CheckCircle size={10} /> Key Strengths
+                          {/* Strengths */}
+                          <Card className="bg-[#181926]/60 border-white/10 rounded-2xl p-4 shadow-md backdrop-blur-md">
+                            <CardHeader className="p-0 pb-2">
+                              <CardTitle className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                                <CheckCircle size={11} /> Key Strengths
                               </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                              <ul className="space-y-1.5 text-[10px] text-gray-300">
+                            <CardContent className="p-0 mt-1">
+                              <ul className="space-y-1.5 text-[10px] text-gray-300 font-semibold">
                                 {application.recruiterReview.keyStrengths.map((str, idx) => (
                                   <li key={idx} className="flex items-start gap-1.5">
-                                    <span className="text-emerald-400 font-bold">•</span>
+                                    <span className="text-emerald-400 font-extrabold">•</span>
                                     <span>{str}</span>
                                   </li>
                                 ))}
@@ -1102,18 +1087,18 @@ export default function PrepareApplicationPage() {
                             </CardContent>
                           </Card>
 
-                          {/* Red Flags */}
-                          <Card className="bg-white/5 border-white/5">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-[10px] text-yellow-400 uppercase font-bold tracking-wider flex items-center gap-1">
-                                <ShieldAlert size={10} /> Red Flags / Skill Gaps
+                          {/* Red flags */}
+                          <Card className="bg-[#181926]/60 border-white/10 rounded-2xl p-4 shadow-md backdrop-blur-md">
+                            <CardHeader className="p-0 pb-2">
+                              <CardTitle className="text-[10px] text-yellow-400 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                                <ShieldAlert size={11} /> Red Flags / Skill Gaps
                               </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                              <ul className="space-y-1.5 text-[10px] text-gray-300">
+                            <CardContent className="p-0 mt-1">
+                              <ul className="space-y-1.5 text-[10px] text-gray-300 font-semibold">
                                 {application.recruiterReview.potentialRedFlags.map((flag, idx) => (
                                   <li key={idx} className="flex items-start gap-1.5">
-                                    <span className="text-yellow-400 font-bold">•</span>
+                                    <span className="text-yellow-400 font-extrabold">•</span>
                                     <span>{flag}</span>
                                   </li>
                                 ))}
@@ -1127,7 +1112,7 @@ export default function PrepareApplicationPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="py-20 text-center bg-white/5 rounded-2xl text-gray-500">
+                    <div className="py-20 text-center bg-[#181926]/60 border border-white/10 p-8 rounded-[32px] text-gray-400 backdrop-blur-md">
                       Select a job listing to prepare recruiter review predictions.
                     </div>
                   )}
@@ -1137,6 +1122,6 @@ export default function PrepareApplicationPage() {
           </main>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
