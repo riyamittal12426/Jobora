@@ -3,6 +3,7 @@ import { Crown, Check, Sparkles, Zap, Star, ArrowUpRight, CreditCard, CalendarDa
 import gsap from 'gsap';
 import { useToast } from '../ToastProvider';
 import ConfirmModal from '../ConfirmModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PLANS = [
   {
@@ -61,12 +62,32 @@ const PLANS = [
 
 export default function SubscriptionSection() {
   const toast = useToast();
+  const { dbUser, loading } = useAuth();
   const sectionRef = useRef(null);
   const cardsRef = useRef([]);
-  const [currentPlan, setCurrentPlan] = useState(() => {
-    return localStorage.getItem('jobora-plan') || 'free';
-  });
+  const [currentPlan, setCurrentPlan] = useState('free');
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  useEffect(() => {
+    if (loading || !dbUser) return;
+    try {
+      const stored = localStorage.getItem(`jobora-plan_${dbUser.email}`);
+      if (stored) {
+        setCurrentPlan(stored);
+      } else {
+        const oldStored = localStorage.getItem('jobora-plan');
+        if (oldStored) {
+          setCurrentPlan(oldStored);
+          localStorage.setItem(`jobora-plan_${dbUser.email}`, oldStored);
+        } else {
+          setCurrentPlan('free');
+          localStorage.setItem(`jobora-plan_${dbUser.email}`, 'free');
+        }
+      }
+    } catch {
+      setCurrentPlan('free');
+    }
+  }, [dbUser, loading]);
 
   useEffect(() => {
     const cards = cardsRef.current.filter(Boolean);
@@ -79,13 +100,17 @@ export default function SubscriptionSection() {
   const handleUpgrade = (planId) => {
     if (planId === currentPlan) return;
     setCurrentPlan(planId);
-    localStorage.setItem('jobora-plan', planId);
+    if (dbUser?.email) {
+      localStorage.setItem(`jobora-plan_${dbUser.email}`, planId);
+    }
     toast.success(`Upgraded to ${PLANS.find(p => p.id === planId)?.name} plan!`, 'Plan Updated');
   };
 
   const handleCancelSub = () => {
     setCurrentPlan('free');
-    localStorage.setItem('jobora-plan', 'free');
+    if (dbUser?.email) {
+      localStorage.setItem(`jobora-plan_${dbUser.email}`, 'free');
+    }
     toast.info('Subscription cancelled. You are now on the Free plan.');
   };
 

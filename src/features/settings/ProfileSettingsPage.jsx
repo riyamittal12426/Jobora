@@ -11,6 +11,8 @@ import NotificationSection from './sections/NotificationSection';
 import ResumeSection from './sections/ResumeSection';
 import AnalyticsSection from './sections/AnalyticsSection';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import axiosInstance from '@/services/axiosInstance';
 
 const NAV_TABS = [
   { id: 'profile', label: 'Profile Information', icon: User },
@@ -34,14 +36,37 @@ const SECTION_COMPONENTS = {
 
 export default function ProfileSettingsPage() {
   const navigate = useNavigate();
+  const { dbUser, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const sidebarRef = useRef(null);
   const contentRef = useRef(null);
 
-  // Get user data
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const profile = JSON.parse(localStorage.getItem('jobora-profile') || '{}');
-  const applications = JSON.parse(localStorage.getItem('applications') || '[]');
+  const [applications, setApplications] = useState([]);
+  const [avatar, setAvatar] = useState(null);
+
+  useEffect(() => {
+    if (loading || !dbUser) return;
+    const fetchData = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/applications/${dbUser.email}`);
+        if (response.data) {
+          setApplications(response.data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      try {
+        const stored = localStorage.getItem(`jobora-profile_${dbUser.email}`);
+        if (stored) {
+          setAvatar(JSON.parse(stored).avatar);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, [dbUser, loading]);
 
   const stats = {
     sent: applications.length,
@@ -55,8 +80,8 @@ export default function ProfileSettingsPage() {
   };
 
   const ActiveComponent = SECTION_COMPONENTS[activeTab] || ProfileSection;
-  const displayName = profile.fullName || [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
-  const displayEmail = profile.email || user.email || 'user@email.com';
+  const displayName = dbUser ? [dbUser.firstName, dbUser.lastName].filter(Boolean).join(' ') || dbUser.displayName || dbUser.email : 'User';
+  const displayEmail = dbUser ? dbUser.email : 'user@email.com';
 
   return (
     <DashboardLayout
@@ -72,8 +97,8 @@ export default function ProfileSettingsPage() {
             <div className="bg-[#181926]/60 backdrop-blur-md rounded-[24px] border border-white/10 p-5 shadow-lg">
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 mb-3 bg-white/5">
-                  {profile.avatar ? (
-                    <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                  {avatar ? (
+                    <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-white/5">
                       <User size={28} className="text-gray-400" />

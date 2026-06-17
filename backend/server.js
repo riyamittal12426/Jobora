@@ -4,18 +4,29 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import ImageKit from 'imagekit';
 import multer from 'multer';
+
+// Models
 import User from './models/User.js';
-import authMiddleware, { hashPassword, verifyPassword, signToken } from './middleware/auth.js';
 import Application from './models/Application.js';
 import ResumeAnalysis from './models/ResumeAnalysis.js';
+
+// Middleware
+import { verifyFirebaseToken } from './middleware/auth.js';
+
+// Routes
+import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import interviewRoutes from './routes/interviewRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import autofillRoutes from './routes/autofillRoutes.js';
 import automationRoutes from './routes/automationRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
 import roadmapRoutes from './routes/roadmapRoutes.js';
+
 import { PDFParse } from 'pdf-parse';
 
 // Load env variables from the parent directory where .env lives
@@ -25,25 +36,56 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const app = express();
 
-// Middleware
+// ─── Security Middleware ───────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // Disable CSP for dev; enable in production
+}));
+
+// ─── Rate Limiting ─────────────────────────────────────────────────
+
+// Strict rate limit for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 requests per window for auth routes
+  message: { message: 'Too many authentication attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// General API rate limit
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // 200 requests per window
+  message: { message: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ─── CORS Configuration ───────────────────────────────────────────
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map(o => o.trim());
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
     if (!origin) return callback(null, true);
-    
-    // Check if origin matches localhost or 127.0.0.1 on any port
+
+    // Check against allowed origins list or local development
     const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-    if (isLocal) {
+    if (isLocal || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
 }));
-app.use(express.json()); // Allows parsing JSON bodies
 
-// ImageKit Initialization
+app.use(express.json({ limit: '10mb' }));
+
+// ─── ImageKit Initialization ──────────────────────────────────────
 const imagekit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "public_l6Cq20xKs2RG3i0SpYNqf5coZTI=",
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "private_7TSpOUWgxQIbwPKeGHJkbQ253+4=",
@@ -53,143 +95,33 @@ const imagekit = new ImageKit({
 // Multer Initialization (Store file in memory temporarily)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Connect to MongoDB
+// ─── MongoDB Connection ───────────────────────────────────────────
 const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jobtracker';
 console.log('🔗 Connecting to MongoDB...');
 mongoose.connect(mongoUri, {
-  serverSelectionTimeoutMS: 15000, // Fail faster if server unreachable
+  serverSelectionTimeoutMS: 15000,
   connectTimeoutMS: 15000,
 })
   .then(() => console.log('✅ MongoDB Connected Successfully'))
   .catch((err) => console.error('❌ MongoDB Connection Error: ', err.message));
 
-// Log any connection errors after initial connect
 mongoose.connection.on('error', (err) => {
   console.error('❌ MongoDB Runtime Error:', err.message);
 });
 
-// Basic default route
+// ─── Health Check ─────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.send('JobTracker API is running...');
 });
 
-// --- USER AUTH & PROFILE ROUTES ---
+// ─── Auth Routes (Rate Limited) ───────────────────────────────────
+app.use('/api/auth', authLimiter, authRoutes);
 
-// 1. Signup Route
-app.post('/api/users/signup', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
-    }
+// ─── Admin Routes ─────────────────────────────────────────────────
+app.use('/api/admin', apiLimiter, adminRoutes);
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      if (!existingUser.password) {
-        // Claim passwordless legacy account
-        const hashedPassword = hashPassword(password);
-        existingUser.password = hashedPassword;
-        await existingUser.save();
-        const token = signToken({ email: existingUser.email, id: existingUser._id });
-        return res.status(201).json({
-          message: 'Legacy account claimed successfully',
-          token,
-          user: {
-            firstName: existingUser.firstName,
-            lastName: existingUser.lastName,
-            email: existingUser.email,
-            phone: existingUser.phone,
-            age: existingUser.age,
-            address: existingUser.address,
-            resume: existingUser.resume
-          }
-        });
-      }
-      return res.status(400).json({ message: 'A user with this email already exists.' });
-    }
-
-    const hashedPassword = hashPassword(password);
-    const newUser = new User({
-      email,
-      password: hashedPassword
-    });
-
-    await newUser.save();
-    const token = signToken({ email: newUser.email, id: newUser._id });
-
-    res.status(201).json({
-      message: 'Signup successful',
-      token,
-      user: { email: newUser.email }
-    });
-  } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// 2. Login Route
-app.post('/api/users/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
-    }
-
-    if (!user.password) {
-      // Claim passwordless legacy account automatically on first login attempt
-      const hashedPassword = hashPassword(password);
-      user.password = hashedPassword;
-      await user.save();
-      const token = signToken({ email: user.email, id: user._id });
-      return res.json({
-        message: 'Login successful (legacy account claimed)',
-        token,
-        user: {
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          age: user.age,
-          address: user.address,
-          resume: user.resume
-        }
-      });
-    }
-
-    const isMatch = verifyPassword(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
-    }
-
-    const token = signToken({ email: user.email, id: user._id });
-
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        age: user.age,
-        address: user.address,
-        resume: user.resume
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// 3. Register/Update User Profile (Authenticated)
-app.post('/api/users/profile', authMiddleware, upload.single('resume'), async (req, res) => {
+// ─── User Profile Route (Authenticated — multipart for resume upload) ──
+app.post('/api/users/profile', verifyFirebaseToken, upload.single('resume'), async (req, res) => {
   try {
     let resumeUrl = req.body.resume;
 
@@ -203,14 +135,14 @@ app.post('/api/users/profile', authMiddleware, upload.single('resume'), async (r
       resumeUrl = uploadResponse.url;
     }
 
-    const email = req.user.email;
+    const firebaseUid = req.user.uid;
     const { password, ...userData } = req.body;
     if (resumeUrl) {
       userData.resume = resumeUrl;
     }
 
     const savedUser = await User.findOneAndUpdate(
-      { email },
+      { firebaseUid },
       { $set: userData },
       { new: true }
     );
@@ -219,27 +151,23 @@ app.post('/api/users/profile', authMiddleware, upload.single('resume'), async (r
       return res.status(404).json({ message: 'User profile not found.' });
     }
 
-    const userObj = savedUser.toObject();
-    delete userObj.password;
-
-    res.status(200).json(userObj);
+    res.status(200).json(savedUser.toObject());
   } catch (error) {
     console.error('Error saving profile:', error);
     res.status(400).json({ message: error.message });
   }
 });
 
-// 4. Get User by Email (Authenticated & Scoped)
-app.get('/api/users/:email', authMiddleware, async (req, res) => {
+// ─── Get User by Email (Authenticated & Scoped) ──────────────────
+app.get('/api/users/:email', verifyFirebaseToken, async (req, res) => {
   try {
+    // User can only access their own profile
     if (req.user.email !== req.params.email) {
       return res.status(403).json({ message: 'Access denied.' });
     }
     const user = await User.findOne({ email: req.params.email });
     if (user) {
-      const userObj = user.toObject();
-      delete userObj.password;
-      res.json(userObj);
+      res.json(user.toObject());
     } else {
       res.status(404).json({ message: 'User not found' });
     }
@@ -248,8 +176,8 @@ app.get('/api/users/:email', authMiddleware, async (req, res) => {
   }
 });
 
-// --- APPLICATION ROUTES ---
-app.post('/api/applications', async (req, res) => {
+// ─── Application Routes ──────────────────────────────────────────
+app.post('/api/applications', verifyFirebaseToken, async (req, res) => {
   try {
     const newApp = new Application(req.body);
     const savedApp = await newApp.save();
@@ -259,8 +187,7 @@ app.post('/api/applications', async (req, res) => {
   }
 });
 
-// Get Applications by User Email
-app.get('/api/applications/:email', async (req, res) => {
+app.get('/api/applications/:email', verifyFirebaseToken, async (req, res) => {
   try {
     const apps = await Application.find({ userEmail: req.params.email }).sort({ dateApplied: -1 });
     res.json(apps);
@@ -269,13 +196,28 @@ app.get('/api/applications/:email', async (req, res) => {
   }
 });
 
-app.use('/api/interview', interviewRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/applications/autofill', autofillRoutes);
-app.use('/api/automation', automationRoutes);
-app.use('/api/prediction', predictionRoutes);
-app.use('/api/roadmap', roadmapRoutes);
+app.delete('/api/applications/:id', verifyFirebaseToken, async (req, res) => {
+  try {
+    const deletedApp = await Application.findByIdAndDelete(req.params.id);
+    if (!deletedApp) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+    res.json({ message: 'Application deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ─── Feature Routes (Rate Limited) ───────────────────────────────
+app.use('/api/interview', apiLimiter, interviewRoutes);
+app.use('/api/jobs', apiLimiter, jobRoutes);
+app.use('/api/applications/autofill', apiLimiter, autofillRoutes);
+app.use('/api/automation', apiLimiter, automationRoutes);
+app.use('/api/prediction', apiLimiter, predictionRoutes);
+app.use('/api/roadmap', apiLimiter, roadmapRoutes);
 app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
+
+// ─── Resume Analysis Utilities ───────────────────────────────────
 
 async function inferExperienceLevel(text, foundTech) {
   const lower = text.toLowerCase();
@@ -299,7 +241,7 @@ async function extractTextFromPdf({ buffer, url }) {
   }
 }
 
-// --- RESUME API ROUTES ---
+// ─── Resume API Routes ───────────────────────────────────────────
 app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
   try {
     let fileUrl = req.body.resumeUrl;
@@ -345,22 +287,18 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
     const foundTech = technicalKeywords.filter(kw => lowerText.includes(kw));
     const missingTech = technicalKeywords.filter(kw => !lowerText.includes(kw)).slice(0, 5);
 
-    // Search for standard header structures to determine ATS
     const hasExperience = lowerText.includes('experience') || lowerText.includes('employment') || lowerText.includes('work history');
     const hasEducation = lowerText.includes('education') || lowerText.includes('university') || lowerText.includes('degree');
     const hasProjects = lowerText.includes('project');
 
-    // Look for numbers with percentages or K/M (e.g. "improved by 20%", "saved $10k") for impact metrics
     const metricsCount = (text.match(/\d+[%kK\+]/g) || []).length;
 
-    // Calculate dynamic scores strictly based on the resume contents
     const techScore = Math.min(100, 40 + (foundTech.length * 6));
     const expScore = hasExperience ? Math.min(100, 60 + (metricsCount * 12)) : 30;
     const atsScore = 100 - (!hasExperience ? 15 : 0) - (!hasEducation ? 15 : 0);
     const projScore = hasProjects ? 85 : 40;
     const overallScore = Math.round((techScore + expScore + atsScore + projScore) / 4);
 
-    // Generate accurate dynamic feedback lists based on the parsed data
     const strengths = [];
     const weaknesses = [];
     const atsIssues = [];
@@ -447,7 +385,7 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
   }
 });
 
-// Global Error Handler Middleware
+// ─── Global Error Handler ────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[Global Error]', err.stack || err.message);
   if (err.name === 'CastError') {
@@ -456,7 +394,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'An unexpected server error occurred.' });
 });
 
-// Start Server
+// ─── Start Server ────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

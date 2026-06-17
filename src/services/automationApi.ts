@@ -1,93 +1,52 @@
 import type { AutomationRun, SubmittedApplication } from '@/types/automation';
-
+import axiosInstance from './axiosInstance';
 import { API_BASE_URL } from './apiConfig';
 
-const API = `${API_BASE_URL}/api/automation`;
-
-const getHeaders = (hasBody = true) => {
-  const token = localStorage.getItem('token');
-  return {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data as T;
-}
+const API = '/api/automation';
 
 export const automationApi = {
   startRun: (email: string, jobs: any[]) =>
-    fetch(`${API}/start`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ userEmail: email, jobs })
-    }).then(r => handle<AutomationRun>(r)),
+    axiosInstance.post<AutomationRun>(`${API}/start`, { userEmail: email, jobs }).then(res => res.data),
 
   getRun: (runId: string) =>
-    fetch(`${API}/run/${runId}`, { headers: getHeaders(false) }).then(r => handle<AutomationRun>(r)),
+    axiosInstance.get<AutomationRun>(`${API}/run/${runId}`).then(res => res.data),
 
   getRuns: (email: string) =>
-    fetch(`${API}/runs/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<AutomationRun[]>(r)),
+    axiosInstance.get<AutomationRun[]>(`${API}/runs/${encodeURIComponent(email)}`).then(res => res.data),
 
   approveJob: (runId: string, jobIndex: number) =>
-    fetch(`${API}/run/${runId}/job/${jobIndex}/approve`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<{ success: boolean; message: string }>(r)),
+    axiosInstance.post<{ success: boolean; message: string }>(`${API}/run/${runId}/job/${jobIndex}/approve`).then(res => res.data),
 
   resumeJob: (runId: string, jobIndex: number) =>
-    fetch(`${API}/run/${runId}/job/${jobIndex}/resume`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<{ success: boolean; message: string }>(r)),
+    axiosInstance.post<{ success: boolean; message: string }>(`${API}/run/${runId}/job/${jobIndex}/resume`).then(res => res.data),
 
   skipJob: (runId: string, jobIndex: number) =>
-    fetch(`${API}/run/${runId}/job/${jobIndex}/skip`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<{ success: boolean; message: string }>(r)),
+    axiosInstance.post<{ success: boolean; message: string }>(`${API}/run/${runId}/job/${jobIndex}/skip`).then(res => res.data),
 
   retryJob: (runId: string, jobIndex: number) =>
-    fetch(`${API}/run/${runId}/job/${jobIndex}/retry`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<{ success: boolean; message: string; run: AutomationRun }>(r)),
+    axiosInstance.post<{ success: boolean; message: string; run: AutomationRun }>(`${API}/run/${runId}/job/${jobIndex}/retry`).then(res => res.data),
 
   updateJobDetails: (runId: string, jobIndex: number, data: { detectedFields?: any[]; generatedAnswers?: any[] }) =>
-    fetch(`${API}/run/${runId}/job/${jobIndex}`, {
-      method: 'PUT',
-      headers: getHeaders(true),
-      body: JSON.stringify(data)
-    }).then(r => handle<{ success: boolean; message: string; run: AutomationRun }>(r)),
+    axiosInstance.put<{ success: boolean; message: string; run: AutomationRun }>(`${API}/run/${runId}/job/${jobIndex}`, data).then(res => res.data),
 
   cancelRun: (runId: string) =>
-    fetch(`${API}/run/${runId}/cancel`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<{ success: boolean; message: string }>(r)),
+    axiosInstance.post<{ success: boolean; message: string }>(`${API}/run/${runId}/cancel`).then(res => res.data),
 
   getSubmittedApplications: (email: string) =>
-    fetch(`${API}/submitted/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<SubmittedApplication[]>(r)),
+    axiosInstance.get<SubmittedApplication[]>(`${API}/submitted/${encodeURIComponent(email)}`).then(res => res.data),
 
   getSubmittedApplication: (id: string) =>
-    fetch(`${API}/submitted/${id}`, { headers: getHeaders(false) }).then(r => handle<SubmittedApplication>(r)),
+    axiosInstance.get<SubmittedApplication>(`${API}/submitted/${id}`).then(res => res.data),
 
   updateSubmittedApplication: (id: string, data: { status?: string; followUpNotes?: string; timeline?: any[] }) =>
-    fetch(`${API}/submitted/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(true),
-      body: JSON.stringify(data)
-    }).then(r => handle<SubmittedApplication>(r)),
+    axiosInstance.put<SubmittedApplication>(`${API}/submitted/${id}`, data).then(res => res.data),
 
   getScreenshotUrl: (runId: string, jobIndex: number) => {
-    return `${API}/run/${runId}/job/${jobIndex}/screenshot`;
+    return `${API_BASE_URL}${API}/run/${runId}/job/${jobIndex}/screenshot`;
   },
 
   subscribeToEvents: (runId: string, onEvent: (payload: { event: string; data: any; timestamp: string }) => void) => {
-    const eventSource = new EventSource(`${API}/run/${runId}/events`);
+    const eventSource = new EventSource(`${API_BASE_URL}${API}/run/${runId}/events`);
     
     eventSource.onmessage = (event) => {
       try {

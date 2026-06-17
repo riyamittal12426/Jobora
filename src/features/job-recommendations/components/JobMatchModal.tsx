@@ -9,6 +9,7 @@ import { MatchBadge } from './MatchBadge';
 import { useSuccessPrediction } from '@/hooks/useSuccessPrediction';
 import { PredictionDashboard } from './prediction/PredictionDashboard';
 import { PredictionSkeleton } from './prediction/PredictionSkeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import type { JobWithAnalysis } from '@/types/jobs';
 
 interface JobMatchModalProps {
@@ -18,14 +19,15 @@ interface JobMatchModalProps {
 
 export function JobMatchModal({ item, onClose }: JobMatchModalProps) {
   const navigate = useNavigate();
+  const { dbUser, loading: authLoading } = useAuth();
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      setUserEmail(JSON.parse(stored).email);
+    if (authLoading) return;
+    if (dbUser) {
+      setUserEmail(dbUser.email);
     }
-  }, []);
+  }, [dbUser, authLoading]);
 
   const {
     prediction,

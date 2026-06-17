@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import UserDashboard from './pages/UserDashboard'
@@ -9,20 +9,73 @@ import PrepareApplicationPage from './features/autofill/PrepareApplicationPage'
 import AutomationCenterPage from './features/automation/AutomationCenterPage'
 import ProfileSettingsPage from './features/settings/ProfileSettingsPage'
 import CareerRoadmapPage from './features/roadmap/CareerRoadmapPage'
+import ProtectedRoute from './components/Auth/ProtectedRoute'
 
 const App = () => {
   return (
     <div className='text-white'>
       <Routes>
+        {/* Public Routes */}
         <Route path='/' element={<Landing />} />
         <Route path='/auth' element={<Auth />} />
-        <Route path='/dashboard' element={<UserDashboard />} />
-        <Route path='/mock-interview' element={<MockInterviewPage />} />
-        <Route path='/job-recommendations' element={<JobRecommendationsPage />} />
-        <Route path='/prepare-application' element={<PrepareApplicationPage />} />
-        <Route path='/automation' element={<AutomationCenterPage />} />
-        <Route path='/settings' element={<ProfileSettingsPage />} />
-        <Route path='/roadmap' element={<CareerRoadmapPage />} />
+
+        {/* Protected Feature Routes */}
+        <Route 
+          path='/dashboard' 
+          element={
+            <ProtectedRoute>
+              <UserDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/mock-interview' 
+          element={
+            <ProtectedRoute>
+              <MockInterviewPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/job-recommendations' 
+          element={
+            <ProtectedRoute>
+              <JobRecommendationsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/prepare-application' 
+          element={
+            <ProtectedRoute>
+              <PrepareApplicationPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/automation' 
+          element={
+            <ProtectedRoute>
+              <AutomationCenterPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/settings' 
+          element={
+            <ProtectedRoute>
+              <ProfileSettingsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/roadmap' 
+          element={
+            <ProtectedRoute>
+              <CareerRoadmapPage />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </div>
   )

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Briefcase,
@@ -9,48 +9,35 @@ import {
   Settings,
   LogOut,
   ArrowLeft,
-  Search,
-  Bell,
-  X,
-  LayoutDashboard,
   Layers,
   ArrowRight
 } from 'lucide-react';
 import ShapeBlur from '../Landing/ShapeBlur';
 import ResumeAnalysisModal from './ResumeAnalysisModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const { user, dbUser, logOut, userName } = useAuth();
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [autoAnalyzeResume, setAutoAnalyzeResume] = useState(false);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Failed to parse user in layout:', err);
-      }
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('applications');
-    localStorage.removeItem('events');
+  const handleLogout = async () => {
+    await logOut();
     navigate('/auth');
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: (active) => <LayoutDashboard className="w-5 h-5 opacity-80" /> },
-    { id: 'jobs', label: 'Job Matches', path: '/job-recommendations', icon: (active) => <Briefcase className="w-5 h-5 opacity-80" /> },
-    { id: 'automation', label: 'Auto-Apply', path: '/automation', icon: (active) => <Terminal className="w-5 h-5 opacity-80" /> },
-    { id: 'mock-interview', label: 'Mock Interview', path: '/mock-interview', icon: (active) => <Mic2 className="w-5 h-5 opacity-80" /> },
-    { id: 'roadmap', label: 'Roadmaps', path: '/roadmap', icon: (active) => <Compass className="w-5 h-5 opacity-80" /> },
-    { id: 'settings', label: 'Settings', path: '/settings', icon: (active) => <Settings className="w-5 h-5 opacity-80" /> },
+    { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
+    { id: 'jobs', label: 'Job Matches', path: '/job-recommendations', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
+    { id: 'automation', label: 'Auto-Apply', path: '/automation', icon: () => <Terminal className="w-5 h-5 opacity-80" /> },
+    { id: 'mock-interview', label: 'Mock Interview', path: '/mock-interview', icon: () => <Mic2 className="w-5 h-5 opacity-80" /> },
+    { id: 'roadmap', label: 'Roadmaps', path: '/roadmap', icon: () => <Compass className="w-5 h-5 opacity-80" /> },
+    { id: 'settings', label: 'Settings', path: '/settings', icon: () => <Settings className="w-5 h-5 opacity-80" /> },
   ];
+
+  const displayUser = dbUser || user;
+  const avatarUrl = displayUser?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80";
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-x-hidden flex items-center justify-center p-0 md:p-6 lg:p-10 font-[font1]">
@@ -150,7 +137,7 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
               )}
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight font-[font2] text-white">
-                  {pageTitle || `Welcome back, ${user?.firstName || 'Taylor'}`}
+                  {pageTitle || `Welcome back, ${userName || 'Taylor'}`}
                 </h1>
                 <p className="text-gray-400 text-xs font-semibold mt-1">
                   {pageSubtitle || 'Manage your career pilot & optimize job applications.'}
@@ -169,8 +156,8 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
 
               <div className="relative w-11 h-11 shrink-0 rounded-full border border-white/10 bg-violet-900/20 flex items-center justify-center overflow-hidden cursor-pointer shadow-md group">
                 <img 
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                  alt="User profile illustration"
+                  src={avatarUrl} 
+                  alt="User profile avatar"
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-[#7c3aed]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -192,7 +179,7 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
           setIsAnalysisModalOpen(false);
           setAutoAnalyzeResume(false);
         }}
-        user={user}
+        user={displayUser}
         autoAnalyze={autoAnalyzeResume}
       />
     </div>

@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { TrendingUp, Send, Users, Award, XCircle, Target, BarChart3 } from 'lucide-react';
 import gsap from 'gsap';
+import { useAuth } from '@/contexts/AuthContext';
+import axiosInstance from '@/services/axiosInstance';
 
 function AnimatedCounter({ target, duration = 1.5, suffix = '' }) {
   const ref = useRef(null);
@@ -101,9 +103,24 @@ function DonutChart({ segments, size = 140 }) {
 export default function AnalyticsSection() {
   const sectionRef = useRef(null);
   const cardsRef = useRef([]);
+  const { dbUser, loading } = useAuth();
+  const [applications, setApplications] = useState([]);
 
-  // Get real data from localStorage
-  const applications = JSON.parse(localStorage.getItem('applications') || '[]');
+  useEffect(() => {
+    if (loading || !dbUser) return;
+    const fetchApps = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/applications/${dbUser.email}`);
+        if (response.data) {
+          setApplications(response.data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchApps();
+  }, [dbUser, loading]);
+
   const total = applications.length;
   const interviews = applications.filter(a => a.status === 'Interviewing').length;
   const offers = applications.filter(a => a.status === 'Offer').length;

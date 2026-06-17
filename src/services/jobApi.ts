@@ -1,53 +1,24 @@
 import type { JobMatchAnalysis, JobRecommendationSession, SavedJobRecord, JobListing } from '@/types/jobs';
+import axiosInstance from './axiosInstance';
 
-import { API_BASE_URL } from './apiConfig';
-
-const API = `${API_BASE_URL}/api/jobs`;
-
-const getHeaders = (hasBody = true) => {
-  const token = localStorage.getItem('token');
-  return {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data as T;
-}
+const API = '/api/jobs';
 
 export const jobApi = {
   getRecommendations: (email: string) =>
-    fetch(`${API}/recommendations/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((r) => handle<JobRecommendationSession>(r)),
+    axiosInstance.get<JobRecommendationSession>(`${API}/recommendations/${encodeURIComponent(email)}`).then(res => res.data),
 
   generateRecommendations: (email: string) =>
-    fetch(`${API}/recommendations/${encodeURIComponent(email)}/generate`, { 
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then((r) => handle<JobRecommendationSession>(r)),
+    axiosInstance.post<JobRecommendationSession>(`${API}/recommendations/${encodeURIComponent(email)}/generate`).then(res => res.data),
 
   analyzeJobDescription: (email: string, jobDescription: string, jobTitle?: string) =>
-    fetch(`${API}/analyze-jd/${encodeURIComponent(email)}`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ jobDescription, jobTitle }),
-    }).then((r) => handle<{ analysis: JobMatchAnalysis }>(r)),
+    axiosInstance.post<{ analysis: JobMatchAnalysis }>(`${API}/analyze-jd/${encodeURIComponent(email)}`, { jobDescription, jobTitle }).then(res => res.data),
 
   getSavedJobs: (email: string) =>
-    fetch(`${API}/saved/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((r) => handle<SavedJobRecord[]>(r)),
+    axiosInstance.get<SavedJobRecord[]>(`${API}/saved/${encodeURIComponent(email)}`).then(res => res.data),
 
   saveJob: (userEmail: string, jobId: string, job: JobListing, analysis: JobMatchAnalysis) =>
-    fetch(`${API}/saved`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ userEmail, jobId, job, analysis }),
-    }).then((r) => handle<SavedJobRecord>(r)),
+    axiosInstance.post<SavedJobRecord>(`${API}/saved`, { userEmail, jobId, job, analysis }).then(res => res.data),
 
   unsaveJob: (id: string) =>
-    fetch(`${API}/saved/${id}`, { 
-      method: 'DELETE',
-      headers: getHeaders(false)
-    }).then((r) => handle<{ message: string }>(r)),
+    axiosInstance.delete<{ message: string }>(`${API}/saved/${id}`).then(res => res.data),
 };

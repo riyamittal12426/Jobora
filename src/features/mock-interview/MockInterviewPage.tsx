@@ -10,6 +10,7 @@ import { ResultsDashboard } from './components/ResultsDashboard';
 import { InterviewHistoryPanel } from './components/InterviewHistoryPanel';
 import { interviewApi } from '@/services/interviewApi';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   FinalInterviewReport,
   InterviewHistoryItem,
@@ -29,6 +30,7 @@ const defaultSettings: InterviewSettings = {
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
+  const { dbUser, loading } = useAuth();
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState('');
@@ -56,23 +58,22 @@ export default function MockInterviewPage() {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) {
+    if (loading) return;
+    if (!dbUser) {
       navigate('/auth');
       return;
     }
-    const user = JSON.parse(stored);
-    setUserEmail(user.email);
+    setUserEmail(dbUser.email);
 
     interviewApi
-      .getResumeAnalysis(user.email)
+      .getResumeAnalysis(dbUser.email)
       .then((data) => {
         setResumeData(data);
         setPhase('setup');
-        loadHistory(user.email);
+        loadHistory(dbUser.email);
       })
       .catch(() => setPhase('no-resume'));
-  }, [navigate, loadHistory]);
+  }, [navigate, loadHistory, dbUser, loading]);
 
   const handleStart = async () => {
     setError(null);

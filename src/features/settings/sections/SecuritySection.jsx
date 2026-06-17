@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { useToast } from '../ToastProvider';
 import ConfirmModal from '../ConfirmModal';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MOCK_DEVICES = [
   { id: 1, name: 'Chrome on Windows', location: 'New Delhi, India', time: '2 minutes ago', icon: Monitor, current: true },
@@ -21,6 +22,7 @@ const MOCK_ACTIVITY = [
 export default function SecuritySection() {
   const toast = useToast();
   const navigate = useNavigate();
+  const { logOut } = useAuth();
   const sectionRef = useRef(null);
   const cardsRef = useRef([]);
 
@@ -64,14 +66,14 @@ export default function SecuritySection() {
     toast.success('Password updated successfully!', 'Security');
   };
 
-  const handleDeleteAccount = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('applications');
-    localStorage.removeItem('events');
-    localStorage.removeItem('jobora-profile');
-    localStorage.removeItem('jobora-settings');
-    localStorage.removeItem('jobora-plan');
-    navigate('/auth');
+  const handleDeleteAccount = async () => {
+    try {
+      await logOut();
+      navigate('/auth');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to log out.');
+    }
   };
 
   const handleLogoutAll = () => {

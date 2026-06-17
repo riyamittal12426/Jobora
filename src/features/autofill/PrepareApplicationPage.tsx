@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { autofillApi } from '@/services/autofillApi';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   CandidateProfile,
   PreparedApplication,
@@ -23,6 +24,7 @@ export default function PrepareApplicationPage() {
   const location = useLocation();
   const stateJob = location.state?.job as JobListing | undefined;
 
+  const { dbUser, loading } = useAuth();
   const [userEmail, setUserEmail] = useState('');
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [application, setApplication] = useState<PreparedApplication | null>(null);
@@ -47,14 +49,13 @@ export default function PrepareApplicationPage() {
 
   // Load User Email
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) {
+    if (loading) return;
+    if (!dbUser) {
       navigate('/auth');
       return;
     }
-    const email = JSON.parse(stored).email;
-    setUserEmail(email);
-  }, [navigate]);
+    setUserEmail(dbUser.email);
+  }, [navigate, dbUser, loading]);
 
   // Load History
   const loadHistory = useCallback(async (email: string) => {

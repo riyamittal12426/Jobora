@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, Upload, X, User, Mail, Phone, MapPin, GraduationCap, Calendar, Briefcase, Globe, Plus, Trash2, Save, Edit3, XCircle } from 'lucide-react';
 import gsap from 'gsap';
 import { useToast } from '../ToastProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import axiosInstance from '@/services/axiosInstance';
 
 const Github = ({ size = 24, className, ...props }) => (
   <svg
@@ -63,20 +65,24 @@ const DEFAULT_PROFILE = {
 
 export default function ProfileSection() {
   const toast = useToast();
+  const { dbUser, loading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(() => {
     try {
-      const stored = localStorage.getItem('jobora-profile');
-      if (stored) return { ...DEFAULT_PROFILE, ...JSON.parse(stored) };
-      // Try to populate from existing user data
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return {
-        ...DEFAULT_PROFILE,
-        fullName: [user.firstName, user.lastName].filter(Boolean).join(' '),
-        email: user.email || '',
-        phone: user.phone || '',
-        location: user.address || '',
-      };
+      if (dbUser) {
+        const stored = localStorage.getItem(`jobora-profile_${dbUser.email}`);
+        if (stored) return { ...DEFAULT_PROFILE, ...JSON.parse(stored) };
+        return {
+          ...DEFAULT_PROFILE,
+          fullName: [dbUser.firstName, dbUser.lastName].filter(Boolean).join(' '),
+          email: dbUser.email || '',
+          phone: dbUser.phone || '',
+          location: dbUser.address || '',
+        };
+      }
+      const oldStored = localStorage.getItem('jobora-profile');
+      if (oldStored) return { ...DEFAULT_PROFILE, ...JSON.parse(oldStored) };
+      return DEFAULT_PROFILE;
     } catch { return DEFAULT_PROFILE; }
   });
   const [editForm, setEditForm] = useState(profile);
@@ -88,6 +94,42 @@ export default function ProfileSection() {
   const sectionRef = useRef(null);
   const cardsRef = useRef([]);
   const fileInputRef = useRef(null);
+
+  // Sync profile from backend CandidateProfile
+  useEffect(() => {
+    if (loading || !dbUser) return;
+    const fetchProfile = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/applications/autofill/profile/${dbUser.email}`);
+        if (response.data) {
+          const fetched = response.data;
+          const mappedProfile = {
+            ...DEFAULT_PROFILE,
+            fullName: fetched.name || [dbUser.firstName, dbUser.lastName].filter(Boolean).join(' ') || '',
+            email: fetched.email || dbUser.email,
+            phone: fetched.phone || dbUser.phone || '',
+            location: fetched.location || dbUser.address || '',
+            college: fetched.education?.[0]?.school || '',
+            degree: fetched.education?.[0]?.degree || '',
+            graduationYear: fetched.education?.[0]?.endDate || '',
+            skills: fetched.skills || [],
+            linkedinUrl: fetched.linkedinUrl || '',
+            githubUrl: fetched.githubUrl || '',
+            portfolioUrl: fetched.portfolioUrl || '',
+            experienceLevel: fetched.experienceLevel || 'Entry Level',
+            preferredRoles: fetched.preferredRoles || [],
+            avatar: fetched.avatar || null
+          };
+          setProfile(mappedProfile);
+          setEditForm(mappedProfile);
+          localStorage.setItem(`jobora-profile_${dbUser.email}`, JSON.stringify(mappedProfile));
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+      }
+    };
+    fetchProfile();
+  }, [dbUser, loading]);
 
   useEffect(() => {
     if (sectionRef.current) {
@@ -111,15 +153,49 @@ export default function ProfileSection() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) {
       toast.error('Please fix the errors before saving.');
       return;
     }
-    setProfile(editForm);
-    localStorage.setItem('jobora-profile', JSON.stringify(editForm));
-    setIsEditing(false);
-    toast.success('Profile updated successfully!', 'Saved');
+
+    if (!dbUser) {
+      toast.error('You must be logged in to save settings.');
+      return;
+    }
+
+    const backendPayload = {
+      name: editForm.fullName,
+      email: editForm.email,
+      phone: editForm.phone,
+      linkedinUrl: editForm.linkedinUrl,
+      githubUrl: editForm.githubUrl,
+      portfolioUrl: editForm.portfolioUrl,
+      skills: editForm.skills,
+      experienceLevel: editForm.experienceLevel,
+      preferredRoles: editForm.preferredRoles,
+      avatar: editForm.avatar,
+      education: (editForm.college || editForm.degree || editForm.graduationYear) ? [{
+        school: editForm.college,
+        degree: editForm.degree,
+        endDate: editForm.graduationYear
+      }] : []
+    };
+
+    try {
+      const response = await axiosInstance.put(`/api/applications/autofill/profile/${dbUser.email}`, backendPayload);
+      if (response.status === 200 || response.status === 201) {
+        setProfile(editForm);
+        localStorage.setItem(`jobora-profile_${dbUser.email}`, JSON.stringify(editForm));
+        setIsEditing(false);
+        toast.success('Profile updated successfully!', 'Saved');
+      } else {
+        toast.error('Failed to save profile on backend.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save profile on backend.');
+    }
   };
 
   const handleCancel = () => {

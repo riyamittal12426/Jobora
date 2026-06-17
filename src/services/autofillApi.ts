@@ -4,77 +4,39 @@ import type {
   DetectedFormField
 } from '@/types/autofill';
 import type { JobListing } from '@/types/jobs';
+import axiosInstance from './axiosInstance';
 
-import { API_BASE_URL } from './apiConfig';
-
-const API = `${API_BASE_URL}/api/applications/autofill`;
-
-const getHeaders = (hasBody = true) => {
-  const token = localStorage.getItem('token');
-  return {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data as T;
-}
+const API = '/api/applications/autofill';
 
 export const autofillApi = {
   getCandidateProfile: (email: string) =>
-    fetch(`${API}/profile/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<CandidateProfile>(r)),
+    axiosInstance.get<CandidateProfile>(`${API}/profile/${encodeURIComponent(email)}`).then(res => res.data),
 
   updateCandidateProfile: (email: string, profile: CandidateProfile) =>
-    fetch(`${API}/profile/${encodeURIComponent(email)}`, {
-      method: 'PUT',
-      headers: getHeaders(true),
-      body: JSON.stringify(profile)
-    }).then(r => handle<CandidateProfile>(r)),
+    axiosInstance.put<CandidateProfile>(`${API}/profile/${encodeURIComponent(email)}`, profile).then(res => res.data),
 
   extractProfileFromResume: (email: string) =>
-    fetch(`${API}/profile/${encodeURIComponent(email)}/extract`, {
-      method: 'POST',
-      headers: getHeaders(false)
-    }).then(r => handle<CandidateProfile>(r)),
+    axiosInstance.post<CandidateProfile>(`${API}/profile/${encodeURIComponent(email)}/extract`).then(res => res.data),
 
   prepareApplication: (email: string, job: JobListing) =>
-    fetch(`${API}/generate`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ userEmail: email, job })
-    }).then(r => handle<PreparedApplication>(r)),
+    axiosInstance.post<PreparedApplication>(`${API}/generate`, { userEmail: email, job }).then(res => res.data),
 
   getApplicationHistory: (email: string) =>
-    fetch(`${API}/history/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then(r => handle<PreparedApplication[]>(r)),
+    axiosInstance.get<PreparedApplication[]>(`${API}/history/${encodeURIComponent(email)}`).then(res => res.data),
 
   getApplication: (id: string) =>
-    fetch(`${API}/${id}`, { headers: getHeaders(false) }).then(r => handle<PreparedApplication>(r)),
+    axiosInstance.get<PreparedApplication>(`${API}/${id}`).then(res => res.data),
 
   updateApplication: (id: string, app: Partial<PreparedApplication>) =>
-    fetch(`${API}/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(true),
-      body: JSON.stringify(app)
-    }).then(r => handle<PreparedApplication>(r)),
+    axiosInstance.put<PreparedApplication>(`${API}/${id}`, app).then(res => res.data),
 
   regenerateContent: (
     id: string,
     type: 'answer' | 'cover_letter',
     details?: { questionIndex?: number; fieldKey?: string }
   ) =>
-    fetch(`${API}/${id}/regenerate`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ type, ...details })
-    }).then(r => handle<PreparedApplication>(r)),
+    axiosInstance.post<PreparedApplication>(`${API}/${id}/regenerate`, { type, ...details }).then(res => res.data),
 
   detectFields: (url: string) =>
-    fetch(`${API}/detect-fields`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ url })
-    }).then(r => handle<{ portal: string; fields: DetectedFormField[] }>(r))
+    axiosInstance.post<{ portal: string; fields: DetectedFormField[] }>(`${API}/detect-fields`, { url }).then(res => res.data)
 };

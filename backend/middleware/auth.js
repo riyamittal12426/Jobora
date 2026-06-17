@@ -1,87 +1,101 @@
-import crypto from 'crypto';
+import admin from '../config/firebaseAdmin.js';
 
-const SECRET_KEY = process.env.JWT_SECRET || 'jobtracker-super-secret-key-32-chars-long-or-more!!!';
-
-// Utility: Hashing passwords with PBKDF2
-export function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return `${salt}:${hash}`;
-}
-
-// Utility: Verifying hashed passwords
-export function verifyPassword(password, storedPassword) {
-  if (!storedPassword) return false;
-  const parts = storedPassword.split(':');
-  if (parts.length !== 2) return false;
-  const [salt, originalHash] = parts;
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return verifyHash === originalHash;
-}
-
-// Utility: Sign Token (JWT standard)
-export function signToken(payload, expiresInSeconds = 86400) {
-  const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const fullPayload = { ...payload, exp };
-
-  const headerBase64 = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const payloadBase64 = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
-
-  const signature = crypto
-    .createHmac('sha256', SECRET_KEY)
-    .update(`${headerBase64}.${payloadBase64}`)
-    .digest('base64url');
-
-  return `${headerBase64}.${payloadBase64}.${signature}`;
-}
-
-// Utility: Verify Token (JWT standard)
-export function verifyToken(token) {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-
-    const [headerBase64, payloadBase64, signature] = parts;
-
-    // Verify signature integrity
-    const expectedSignature = crypto
-      .createHmac('sha256', SECRET_KEY)
-      .update(`${headerBase64}.${payloadBase64}`)
-      .digest('base64url');
-
-    if (signature !== expectedSignature) return null;
-
-    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8'));
-
-    // Check expiration timestamp
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
-      return null;
-    }
-
-    return payload;
-  } catch (error) {
-    return null;
-  }
-}
-
-// Express Middleware: Authenticate Request token
-export default function authMiddleware(req, res, next) {
+/**
+ * Middleware: Verify Firebase ID Token
+ * Extracts the Bearer token from Authorization header,
+ * verifies it with Firebase Admin SDK, and attaches decoded
+ * user info (uid, email) to req.user.
+ */
+export async function verifyFirebaseToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authorization token is missing or malformed.' });
+      return res.status(401).json({
+        message: 'Authorization token is missing or malformed.',
+      });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return res.status(401).json({ message: 'Authorization token is invalid or expired.' });
+    const idToken = authHeader.split('Bearer ')[1];
+    if (!idToken) {
+      return res.status(401).json({
+        message: 'Authorization token is empty.',
+      });
     }
 
-    req.user = decoded;
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    // Attach the decoded Firebase user to the request
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email || null,
+      emailVerified: decodedToken.email_verified || false,
+      displayName: decodedToken.name || null,
+      photoURL: decodedToken.picture || null,
+      authProvider: decodedToken.firebase?.sign_in_provider || 'unknown',
+    };
+
     next();
   } catch (error) {
+    console.error('🔒 Firebase token verification failed:', error.code || error.message);
+
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ message: 'Token has expired. Please sign in again.' });
+    }
+    if (error.code === 'auth/id-token-revoked') {
+      return res.status(401).json({ message: 'Token has been revoked. Please sign in again.' });
+    }
+    if (error.code === 'auth/argument-error') {
+      return res.status(401).json({ message: 'Invalid token format.' });
+    }
+
     return res.status(401).json({ message: 'Failed to authenticate request.' });
   }
 }
+
+/**
+ * Middleware Factory: Require a specific role
+ * Must be used AFTER verifyFirebaseToken and after user
+ * has been synced (req.dbUser populated by controller).
+ *
+ * Usage: app.get('/admin', verifyFirebaseToken, requireRole('admin'), handler)
+ */
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.dbUser) {
+      return res.status(403).json({ message: 'User profile not found.' });
+    }
+
+    if (!roles.includes(req.dbUser.role)) {
+      return res.status(403).json({
+        message: `Access denied. Required role: ${roles.join(' or ')}.`,
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware: Attach MongoDB user to req.dbUser
+ * Looks up the user in the database by Firebase UID.
+ * Must be used AFTER verifyFirebaseToken.
+ */
+export async function attachDbUser(req, res, next) {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { default: User } = await import('../models/User.js');
+
+    const dbUser = await User.findOne({ firebaseUid: req.user.uid });
+    if (dbUser) {
+      req.dbUser = dbUser;
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error attaching DB user:', error.message);
+    next(); // Continue even if DB lookup fails
+  }
+}
+
+// Default export for backward compatibility with existing route imports
+export default verifyFirebaseToken;

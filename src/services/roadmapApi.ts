@@ -102,53 +102,23 @@ export interface CareerRoadmap {
   updatedAt: string;
 }
 
-import { API_BASE_URL } from './apiConfig';
+import axiosInstance from './axiosInstance';
 
-const API = `${API_BASE_URL}/api/roadmap`;
-
-const getHeaders = (hasBody = true) => {
-  const token = localStorage.getItem('token');
-  return {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data as T;
-}
+const API = '/api/roadmap';
 
 export const roadmapApi = {
   getRoadmap: (email: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((r) => handle<CareerRoadmap>(r)),
+    axiosInstance.get<CareerRoadmap>(`${API}/${encodeURIComponent(email)}`).then(res => res.data),
 
   generateRoadmap: (email: string, targetRole: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}/generate`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ targetRole }),
-    }).then((r) => handle<CareerRoadmap>(r)),
+    axiosInstance.post<CareerRoadmap>(`${API}/${encodeURIComponent(email)}/generate`, { targetRole }).then(res => res.data),
 
   completeTask: (email: string, taskId: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}/complete-task`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ taskId }),
-    }).then((r) => handle<CareerRoadmap>(r)),
+    axiosInstance.post<CareerRoadmap>(`${API}/${encodeURIComponent(email)}/complete-task`, { taskId }).then(res => res.data),
 
   uncompleteTask: (email: string, taskId: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}/uncomplete-task`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ taskId }),
-    }).then((r) => handle<CareerRoadmap>(r)),
+    axiosInstance.post<CareerRoadmap>(`${API}/${encodeURIComponent(email)}/uncomplete-task`, { taskId }).then(res => res.data),
 
   askMentor: (email: string, question: string) =>
-    fetch(`${API}/${encodeURIComponent(email)}/mentor-ask`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ question }),
-    }).then((r) => handle<{ answer: string }>(r)),
+    axiosInstance.post<{ answer: string }>(`${API}/${encodeURIComponent(email)}/mentor-ask`, { question }).then(res => res.data),
 };

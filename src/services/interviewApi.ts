@@ -6,54 +6,23 @@ import type {
   InterviewSettings,
   ResumeAnalysisData,
 } from '@/types/interview';
+import axiosInstance from './axiosInstance';
 
-import { API_BASE_URL } from './apiConfig';
-
-const API_BASE = `${API_BASE_URL}/api`;
-
-const getHeaders = (hasBody = true) => {
-  const token = localStorage.getItem('token');
-  return {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
-
-async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Request failed');
-  }
-  return data as T;
-}
+const API_BASE = '/api/interview';
 
 export const interviewApi = {
   getResumeAnalysis: (email: string) =>
-    fetch(`${API_BASE}/interview/resume-analysis/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((res) =>
-      handleResponse<ResumeAnalysisData>(res)
-    ),
+    axiosInstance.get<ResumeAnalysisData>(`${API_BASE}/resume-analysis/${encodeURIComponent(email)}`).then(res => res.data),
 
   startInterview: (userEmail: string, settings: InterviewSettings) =>
-    fetch(`${API_BASE}/interview/start`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ userEmail, settings }),
-    }).then((res) => handleResponse<InterviewSessionStart>(res)),
+    axiosInstance.post<InterviewSessionStart>(`${API_BASE}/start`, { userEmail, settings }).then(res => res.data),
 
   submitAnswer: (interviewId: string, answer: string) =>
-    fetch(`${API_BASE}/interview/${interviewId}/answer`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({ answer }),
-    }).then((res) => handleResponse<InterviewAnswerResponse>(res)),
+    axiosInstance.post<InterviewAnswerResponse>(`${API_BASE}/${interviewId}/answer`, { answer }).then(res => res.data),
 
   getHistory: (email: string) =>
-    fetch(`${API_BASE}/interview/history/${encodeURIComponent(email)}`, { headers: getHeaders(false) }).then((res) =>
-      handleResponse<InterviewHistoryItem[]>(res)
-    ),
+    axiosInstance.get<InterviewHistoryItem[]>(`${API_BASE}/history/${encodeURIComponent(email)}`).then(res => res.data),
 
   getInterview: (id: string) =>
-    fetch(`${API_BASE}/interview/${id}`, { headers: getHeaders(false) }).then((res) =>
-      handleResponse<{ finalReport?: FinalInterviewReport; settings: InterviewSettings }>(res)
-    ),
+    axiosInstance.get<{ finalReport?: FinalInterviewReport; settings: InterviewSettings }>(`${API_BASE}/${id}`).then(res => res.data),
 };

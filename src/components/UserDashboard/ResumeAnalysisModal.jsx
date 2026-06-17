@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '@/services/apiConfig';
+import axiosInstance from '@/services/axiosInstance';
 
 const CircularScore = ({ score, label, colorClass, strokeColor }) => (
   <div className="flex flex-col items-center">
@@ -78,23 +79,16 @@ const ResumeAnalysisModal = ({ isOpen, onClose, user, autoAnalyze = false }) => 
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/api/resume/analyze`, {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: formData
+      const response = await axiosInstance.post('/api/resume/analyze', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
-      const data = await res.json();
-      
-      if (res.ok) {
-        setAnalysisData(data);
-        setStep('results');
-      } else {
-        throw new Error(data.message || 'Failed analysis');
-      }
+      setAnalysisData(response.data);
+      setStep('results');
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Analysis failed. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Analysis failed. Please try again.');
       setStep('idle');
     }
   };

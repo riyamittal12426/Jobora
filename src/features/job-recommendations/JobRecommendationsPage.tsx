@@ -15,6 +15,7 @@ import { SkillGapPanel } from './components/SkillGapPanel';
 import { CareerAdvisorPanel } from './components/CareerAdvisorPanel';
 import { JobMatchAssistant } from './components/JobMatchAssistant';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import type { JobWithAnalysis } from '@/types/jobs';
 
 type Tab = 'jobs' | 'readiness' | 'skills' | 'advisor' | 'assistant';
@@ -29,6 +30,7 @@ const TABS: { id: Tab; label: string; icon: typeof Briefcase }[] = [
 
 export default function JobRecommendationsPage() {
   const navigate = useNavigate();
+  const { dbUser, loading: authLoading } = useAuth();
   const [userEmail, setUserEmail] = useState('');
   const [tab, setTab] = useState<Tab>('jobs');
   const [selectedJob, setSelectedJob] = useState<JobWithAnalysis | null>(null);
@@ -66,13 +68,13 @@ export default function JobRecommendationsPage() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) {
+    if (authLoading) return;
+    if (!dbUser) {
       navigate('/auth');
       return;
     }
-    setUserEmail(JSON.parse(stored).email);
-  }, [navigate]);
+    setUserEmail(dbUser.email);
+  }, [navigate, dbUser, authLoading]);
 
   const noSession = !loading && !session;
 

@@ -15,6 +15,7 @@ import SimulatorSection from './components/SimulatorSection';
 import MentorSection from './components/MentorSection';
 import CareerProjectionSection from './components/CareerProjectionSection';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SubTab = 'dashboard' | 'timeline' | 'simulator' | 'mentor' | 'projection';
 
@@ -28,9 +29,10 @@ const TABS: { id: SubTab; label: string; icon: any }[] = [
 
 export default function CareerRoadmapPage() {
   const navigate = useNavigate();
+  const { dbUser, loading } = useAuth();
   const [userEmail, setUserEmail] = useState<string>('');
   const [roadmap, setRoadmap] = useState<CareerRoadmap | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [roadmapLoading, setRoadmapLoading] = useState<boolean>(true);
   const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -52,15 +54,14 @@ export default function CareerRoadmapPage() {
   ];
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) {
+    if (loading) return;
+    if (!dbUser) {
       navigate('/auth');
       return;
     }
-    const email = JSON.parse(stored).email;
-    setUserEmail(email);
-    fetchRoadmap(email);
-  }, [navigate]);
+    setUserEmail(dbUser.email);
+    fetchRoadmap(dbUser.email);
+  }, [navigate, dbUser, loading]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -73,7 +74,7 @@ export default function CareerRoadmapPage() {
   }, [generating]);
 
   const fetchRoadmap = async (email: string) => {
-    setLoading(true);
+    setRoadmapLoading(true);
     setError(null);
     try {
       const data = await roadmapApi.getRoadmap(email);
@@ -81,7 +82,7 @@ export default function CareerRoadmapPage() {
     } catch (err: any) {
       console.log('No existing roadmap found:', err.message);
     } finally {
-      setLoading(false);
+      setRoadmapLoading(false);
     }
   };
 
@@ -171,7 +172,7 @@ export default function CareerRoadmapPage() {
         )}
 
         {/* Global Loading Spinner */}
-        {loading && !generating && (
+        {roadmapLoading && !generating && (
           <div className="py-20 text-center space-y-4 bg-[#181926]/60 border border-white/10 p-8 rounded-[32px] max-w-xl mx-auto backdrop-blur-md">
             <Loader2 size={40} className="mx-auto animate-spin text-purple-400" />
             <p className="text-xs font-semibold text-gray-400">Checking for existing career roadmaps...</p>
@@ -179,7 +180,7 @@ export default function CareerRoadmapPage() {
         )}
 
         {/* Initial Setup/Selection State */}
-        {!loading && !roadmap && !generating && (
+        {!roadmapLoading && !roadmap && !generating && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }} 
             animate={{ opacity: 1, scale: 1 }}

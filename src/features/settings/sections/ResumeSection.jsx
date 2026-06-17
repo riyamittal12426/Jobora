@@ -3,6 +3,7 @@ import { FileText, Upload, Download, Trash2, Star, StarOff, Clock, BarChart3, Pl
 import gsap from 'gsap';
 import { useToast } from '../ToastProvider';
 import ConfirmModal from '../ConfirmModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MOCK_RESUMES = [
   { id: 1, name: 'Software_Engineer_Resume_v3.pdf', uploadDate: '2026-06-10', atsScore: 87, isDefault: true, size: '245 KB' },
@@ -35,17 +36,34 @@ function AtsScoreRing({ score, size = 48 }) {
 
 export default function ResumeSection() {
   const toast = useToast();
+  const { dbUser, loading } = useAuth();
   const sectionRef = useRef(null);
   const cardsRef = useRef([]);
   const fileInputRef = useRef(null);
-  const [resumes, setResumes] = useState(() => {
-    try {
-      const stored = localStorage.getItem('jobora-resumes');
-      return stored ? JSON.parse(stored) : MOCK_RESUMES;
-    } catch { return MOCK_RESUMES; }
-  });
+  const [resumes, setResumes] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+
+  useEffect(() => {
+    if (loading || !dbUser) return;
+    try {
+      const stored = localStorage.getItem(`jobora-resumes_${dbUser.email}`);
+      if (stored) {
+        setResumes(JSON.parse(stored));
+      } else {
+        const oldStored = localStorage.getItem('jobora-resumes');
+        if (oldStored) {
+          setResumes(JSON.parse(oldStored));
+          localStorage.setItem(`jobora-resumes_${dbUser.email}`, oldStored);
+        } else {
+          setResumes(MOCK_RESUMES);
+          localStorage.setItem(`jobora-resumes_${dbUser.email}`, JSON.stringify(MOCK_RESUMES));
+        }
+      }
+    } catch {
+      setResumes(MOCK_RESUMES);
+    }
+  }, [dbUser, loading]);
 
   useEffect(() => {
     const cards = cardsRef.current.filter(Boolean);
@@ -57,7 +75,9 @@ export default function ResumeSection() {
 
   const saveResumes = (updated) => {
     setResumes(updated);
-    localStorage.setItem('jobora-resumes', JSON.stringify(updated));
+    if (dbUser?.email) {
+      localStorage.setItem(`jobora-resumes_${dbUser.email}`, JSON.stringify(updated));
+    }
   };
 
   const handleSetDefault = (id) => {

@@ -9,27 +9,33 @@ import AutomationReviewModal from './AutomationReviewModal';
 import CaptchaResolutionCard from './CaptchaResolutionCard';
 import { automationApi } from '@/services/automationApi';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import type { SubmittedApplication } from '@/types/automation';
 
 export default function AutomationCenterPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { dbUser, loading } = useAuth();
 
-  // Get user details from localStorage
-  const [user, setUser] = useState<any>(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<any>(null);
+  const [selectedQueue, setSelectedQueue] = useState<any[]>([]);
 
-  // Load selected jobs from router state or localStorage
-  const [selectedQueue, setSelectedQueue] = useState<any[]>(() => {
-    if (location.state?.selectedJobs) {
-      localStorage.setItem('selected_jobs_automation', JSON.stringify(location.state.selectedJobs));
-      return location.state.selectedJobs;
+  useEffect(() => {
+    if (loading) return;
+    if (!dbUser) {
+      navigate('/auth');
+      return;
     }
-    const stored = localStorage.getItem('selected_jobs_automation');
-    return stored ? JSON.parse(stored) : [];
-  });
+    setUser(dbUser);
+
+    if (location.state?.selectedJobs) {
+      localStorage.setItem(`selected_jobs_automation_${dbUser.email}`, JSON.stringify(location.state.selectedJobs));
+      setSelectedQueue(location.state.selectedJobs);
+    } else {
+      const stored = localStorage.getItem(`selected_jobs_automation_${dbUser.email}`);
+      setSelectedQueue(stored ? JSON.parse(stored) : []);
+    }
+  }, [location.state, dbUser, loading, navigate]);
 
   const userEmail = user?.email || '';
   const {
@@ -78,7 +84,9 @@ export default function AutomationCenterPage() {
   const handleStartSmartApply = async (jobsToSubmit: any[]) => {
     try {
       const run = await startRun(jobsToSubmit);
-      localStorage.removeItem('selected_jobs_automation');
+      if (dbUser?.email) {
+        localStorage.removeItem(`selected_jobs_automation_${dbUser.email}`);
+      }
       setSelectedQueue([]);
       setActiveTab('live');
     } catch (err) {
@@ -87,7 +95,9 @@ export default function AutomationCenterPage() {
   };
 
   const handleClearQueue = () => {
-    localStorage.removeItem('selected_jobs_automation');
+    if (dbUser?.email) {
+      localStorage.removeItem(`selected_jobs_automation_${dbUser.email}`);
+    }
     setSelectedQueue([]);
   };
 
