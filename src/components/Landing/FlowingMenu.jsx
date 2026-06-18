@@ -11,21 +11,20 @@ function FlowingMenu({
   borderColor = '#fff'
 }) {
   return (
-    <div className="w-full h-full overflow-hidden flex items-center" style={{ backgroundColor: bgColor }}>
-      <nav className="flex flex-col h-full w-full m-0 p-1">
-        {items.map((item, idx) => (
-          <MenuItem
-            key={idx}
-            {...item}
-            speed={speed}
-            textColor={textColor}
-            marqueeBgColor={marqueeBgColor}
-            marqueeTextColor={marqueeTextColor}
-            borderColor={borderColor}
-            isFirst={idx === 0}
-          />
-        ))}
-      </nav>
+    <div className="w-full h-full overflow-hidden flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">      <nav className="flex flex-col h-full w-full m-0 p-1">
+      {items.map((item, idx) => (
+        <MenuItem
+          key={idx}
+          {...item}
+          speed={speed}
+          textColor={textColor}
+          marqueeBgColor={marqueeBgColor}
+          marqueeTextColor={marqueeTextColor}
+          borderColor={borderColor}
+          isFirst={idx === 0}
+        />
+      ))}
+    </nav>
     </div>
   );
 }
