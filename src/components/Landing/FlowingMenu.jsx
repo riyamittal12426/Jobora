@@ -125,6 +125,11 @@ function MenuItem({ link, text, image, speed, textColor, marqueeBgColor, marquee
         onMouseLeave={handleMouseLeave}
         style={{ color: textColor }}
       >
+        <img
+          src={image}
+          alt=""
+          className="w-[24px] h-[24px] md:w-[32px] md:h-[32px] mr-3 rounded-full object-cover flex-shrink-0"
+        />
         {text}
       </a>
       <div

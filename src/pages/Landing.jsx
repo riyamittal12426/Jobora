@@ -8,17 +8,17 @@ import FlowingMenu from '../components/Landing/FlowingMenu';
 import Features from '../components/Landing/features';
 
 const menuItems = [
-  { link: '#', text: 'Resume Analysis', image: 'https://picsum.photos/600/400?random=1' },
-  { link: '#', text: 'Job Matching', image: 'https://picsum.photos/600/400?random=2' },
-  { link: '#', text: 'Track Applications', image: 'https://picsum.photos/600/400?random=3' },
-  { link: '#', text: 'AI Career Guidance', image: 'https://picsum.photos/600/400?random=4' },
+  { link: '#', text: 'Resume Analysis', image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400' },
+  { link: '#', text: 'Job Matching', image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400' },
+  { link: '#', text: 'Track Applications', image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400' },
+  { link: '#', text: 'AI Career Guidance', image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400' },
 ]
 
 const Landing = () => {
   const navigate = useNavigate();
 
   return (
-    <div className='relative w-full bg-black min-h-[200vh]'>
+    <div className='relative w-full bg-black'>
 
       {/* 1) Moving ShapeBlur here with 'fixed' ensures it follows your screen forever */}
       <div className='fixed inset-0 pointer-events-none z-10'>
@@ -54,7 +54,10 @@ const Landing = () => {
         </section>
 
         <div className='absolute top-5 right-5 p-4 z-50'>
-          <button onClick={() => navigate("/Auth")}>
+          <button
+            onClick={() => navigate("/Auth")}
+            className="px-6 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium rounded-full shadow-lg transition-all hover:bg-white/20 hover:scale-105"
+          >
             Login / Sign Up
           </button>
         </div>
@@ -68,8 +71,8 @@ const Landing = () => {
 
       </div>
 
-      {/* Scroll down into this section; it will be a blank terminal over the black bg with ShapeBlur hovering. */}
-      <div className='section2 relative h-screen w-full z-20 pointer-events-none'>
+      {/* Features section — full height for grid layout */}
+      <div className='section2 relative w-full z-20'>
         <Features />
       </div>
 

@@ -1,9 +1,18 @@
 import React from 'react'
-import ShapeBlur from './ShapeBlur';
+import { useNavigate } from 'react-router-dom';
 
 const HeroText = () => {
+  const navigate = useNavigate();
+
+  const handleLearnMore = () => {
+    const section2 = document.querySelector('.section2');
+    if (section2) {
+      section2.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center pt-40 font-[font2]">
+    <div className="absolute inset-0 flex items-center justify-center pt-40 font-[font2] pointer-events-auto">
 
       {/* Glass Hero Card */}
       <div
@@ -27,7 +36,6 @@ const HeroText = () => {
         "
       >
 
-
         {/* Main Heading */}
         <h1 className="text-[7vw] font-bold uppercase text-white leading-none">
           Jobora
@@ -48,11 +56,17 @@ const HeroText = () => {
         </p>
 
         <div className="flex gap-4 mt-8">
-          <button className="px-6 py-3 bg-white text-black rounded-full font-semibold">
+          <button 
+            onClick={() => navigate('/Auth')}
+            className="px-6 py-3 bg-white text-black rounded-full font-semibold transition-transform hover:scale-105"
+          >
             Get Started
           </button>
 
-          <button className="px-6 py-3 border border-white/30 text-white rounded-full">
+          <button 
+            onClick={handleLearnMore}
+            className="px-6 py-3 border border-white/30 text-white rounded-full transition-all hover:bg-white/10 hover:scale-105"
+          >
             Learn More
           </button>
         </div>
