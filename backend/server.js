@@ -26,6 +26,7 @@ import autofillRoutes from './routes/autofillRoutes.js';
 import automationRoutes from './routes/automationRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
 import roadmapRoutes from './routes/roadmapRoutes.js';
+import networkRoutes from './routes/networkRoutes.js';
 
 import { PDFParse } from 'pdf-parse';
 
@@ -215,6 +216,7 @@ app.use('/api/applications/autofill', apiLimiter, autofillRoutes);
 app.use('/api/automation', apiLimiter, automationRoutes);
 app.use('/api/prediction', apiLimiter, predictionRoutes);
 app.use('/api/roadmap', apiLimiter, roadmapRoutes);
+app.use('/api/network', apiLimiter, networkRoutes);
 app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
 
 // ─── Resume Analysis Utilities ───────────────────────────────────

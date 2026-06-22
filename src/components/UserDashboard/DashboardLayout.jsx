@@ -10,8 +10,12 @@ import {
   LogOut,
   ArrowLeft,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Menu,
+  X,
+  Users
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ShapeBlur from '../Landing/ShapeBlur';
 import ResumeAnalysisModal from './ResumeAnalysisModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,6 +25,7 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
   const { user, dbUser, logOut, userName } = useAuth();
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [autoAnalyzeResume, setAutoAnalyzeResume] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
     await logOut();
@@ -31,6 +36,7 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
     { id: 'jobs', label: 'Job Matches', path: '/job-recommendations', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
     { id: 'automation', label: 'Auto-Apply', path: '/automation', icon: () => <Terminal className="w-5 h-5 opacity-80" /> },
+    { id: 'network', label: 'Network CRM', path: '/network', icon: () => <Users className="w-5 h-5 opacity-80" /> },
     { id: 'mock-interview', label: 'Mock Interview', path: '/mock-interview', icon: () => <Mic2 className="w-5 h-5 opacity-80" /> },
     { id: 'roadmap', label: 'Roadmaps', path: '/roadmap', icon: () => <Compass className="w-5 h-5 opacity-80" /> },
     { id: 'settings', label: 'Settings', path: '/settings', icon: () => <Settings className="w-5 h-5 opacity-80" /> },
@@ -57,18 +63,40 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
       {/* Main glassmorphism card container */}
       <div className="relative z-10 w-full max-w-[1440px] min-h-[92vh] bg-[#0c0d14]/75 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-2xl flex flex-col lg:flex-row text-white overflow-hidden">
         
+        {/* Mobile Sidebar Overlay */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md z-40 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
         {/* SIDEBAR NAVIGATION PANEL */}
-        <aside className="w-full lg:w-[260px] shrink-0 bg-[#13141f]/90 text-[#9da1b4] flex flex-col justify-between p-6 relative overflow-hidden lg:rounded-l-[32px] border-r border-white/5">
+        <aside className={`absolute lg:relative top-0 bottom-0 left-0 z-50 w-[260px] shrink-0 bg-[#13141f]/95 lg:bg-[#13141f]/90 text-[#9da1b4] flex flex-col justify-between p-6 overflow-hidden lg:rounded-l-[32px] border-r border-white/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isSidebarOpen ? 'translate-x-0 shadow-2xl shadow-purple-900/20' : '-translate-x-full lg:translate-x-0'}`}>
           <div className="relative z-10 flex flex-col gap-8">
-            {/* Brand Logo */}
-            <div className="flex items-center gap-3 mt-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#7c3aed] to-[#c084fc] flex items-center justify-center shadow-lg shadow-purple-950/40">
-                <Layers className="w-5 h-5 text-white" />
+            {/* Brand Logo & Mobile Close */}
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { navigate('/dashboard'); setIsSidebarOpen(false); }}>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#7c3aed] to-[#c084fc] flex items-center justify-center shadow-lg shadow-purple-950/40">
+                  <Layers className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold font-[font2] text-white tracking-tight leading-none">JobTracker</h2>
+                  <span className="text-[10px] text-[#a855f7] font-semibold tracking-widest uppercase font-[font2]">AI Pilot v1.0</span>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold font-[font2] text-white tracking-tight leading-none">JobTracker</h2>
-                <span className="text-[10px] text-[#a855f7] font-semibold tracking-widest uppercase font-[font2]">AI Pilot v1.0</span>
-              </div>
+              <button 
+                className="lg:hidden p-1.5 bg-white/5 rounded-lg text-gray-400 hover:text-white border border-white/10"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <X size={16} />
+              </button>
             </div>
 
             {/* Sidebar Navigation */}
@@ -78,7 +106,7 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => { navigate(item.path); setIsSidebarOpen(false); }}
                     className={`flex items-center justify-between px-4 py-3 rounded-2xl shadow-sm transition-all text-sm font-[font2] cursor-pointer ${
                       isActive 
                         ? 'bg-[#7c3aed] text-white font-semibold' 
@@ -124,28 +152,34 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
         {/* MAIN PANEL CONTENT BODY */}
         <main className="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto max-h-[100vh]">
           {/* Top row: Page header title / navigation back arrow / avatar */}
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-3">
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex items-start gap-3 min-w-0">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 shrink-0 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer mt-1 md:mt-0 lg:hidden"
+              >
+                <Menu size={16} />
+              </button>
               {currentPage !== 'dashboard' && (
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer mr-1.5"
+                  className="p-2 shrink-0 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer mt-1 md:mt-0 hidden lg:block"
                   title="Back to Dashboard"
                 >
                   <ArrowLeft size={16} />
                 </button>
               )}
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight font-[font2] text-white">
+              <div className="min-w-0">
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-[font2] text-white truncate break-words whitespace-normal">
                   {pageTitle || `Welcome back, ${userName || 'Taylor'}`}
                 </h1>
-                <p className="text-gray-400 text-xs font-semibold mt-1">
+                <p className="text-gray-400 text-xs font-semibold mt-1 line-clamp-2">
                   {pageSubtitle || 'Manage your career pilot & optimize job applications.'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between md:justify-end gap-4 shrink-0">
               <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3.5 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-xs font-semibold text-gray-300 hover:text-white transition-all cursor-pointer font-[font2]"

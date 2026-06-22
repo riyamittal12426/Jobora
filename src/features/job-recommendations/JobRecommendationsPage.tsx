@@ -87,12 +87,12 @@ export default function JobRecommendationsPage() {
       <div className="w-full flex flex-col gap-6">
         {/* Navigation tabs inside header */}
         {session && (
-          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-white/5">
+          <div className="flex items-center gap-2 pb-2 border-b border-white/5 overflow-x-auto no-scrollbar scroll-smooth">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   tab === t.id 
                     ? 'bg-[#7c3aed] text-white shadow-md font-extrabold' 
                     : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/10'
@@ -105,7 +105,7 @@ export default function JobRecommendationsPage() {
             <button
               onClick={() => generate()}
               disabled={generating}
-              className="ml-auto flex items-center gap-1.5 px-4 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] disabled:bg-[#7c3aed]/30 text-white rounded-2xl text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-lg"
+              className="ml-auto shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] disabled:bg-[#7c3aed]/30 text-white rounded-2xl text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-lg"
             >
               {generating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
               <span>{generating ? 'Analyzing...' : 'Refresh Matches'}</span>

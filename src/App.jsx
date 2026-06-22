@@ -9,6 +9,7 @@ import PrepareApplicationPage from './features/autofill/PrepareApplicationPage'
 import AutomationCenterPage from './features/automation/AutomationCenterPage'
 import ProfileSettingsPage from './features/settings/ProfileSettingsPage'
 import CareerRoadmapPage from './features/roadmap/CareerRoadmapPage'
+import NetworkCRMPage from './features/network/NetworkCRMPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 
 const App = () => {
@@ -73,6 +74,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <CareerRoadmapPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/network' 
+          element={
+            <ProtectedRoute>
+              <NetworkCRMPage />
             </ProtectedRoute>
           } 
         />
