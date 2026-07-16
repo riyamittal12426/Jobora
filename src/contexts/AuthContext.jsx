@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signOut,
   updateProfile,
+  fetchSignInMethodsForEmail, // ← NEW: Used to detect existing providers before login/signup
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { API_BASE_URL } from '../services/apiConfig';
@@ -28,6 +29,7 @@ export function useAuth() {
 /**
  * Sync the Firebase user to the backend MongoDB database.
  * Called after every successful authentication event.
+ * ── UNCHANGED ──
  */
 async function syncUserToBackend(firebaseUser) {
   try {
@@ -55,12 +57,12 @@ async function syncUserToBackend(firebaseUser) {
 
 // ─── Provider ────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);         // Firebase Auth user object
-  const [dbUser, setDbUser] = useState(null);      // MongoDB user profile
-  const [loading, setLoading] = useState(true);    // Initial auth check
-  const [error, setError] = useState(null);        // Auth error messages
+  const [user, setUser] = useState(null);         // Firebase Auth user object  ── UNCHANGED
+  const [dbUser, setDbUser] = useState(null);      // MongoDB user profile       ── UNCHANGED
+  const [loading, setLoading] = useState(true);    // Initial auth check         ── UNCHANGED
+  const [error, setError] = useState(null);        // Auth error messages        ── UNCHANGED
 
-  // Clear error after 5 seconds
+  // Clear error after 5 seconds ── UNCHANGED
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(null), 5000);
@@ -68,7 +70,7 @@ export function AuthProvider({ children }) {
     }
   }, [error]);
 
-  // ── Listen for Firebase auth state changes (login persistence) ──
+  // ── Listen for Firebase auth state changes (login persistence) ── UNCHANGED
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -87,6 +89,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Helper: Map Firebase error codes to friendly messages ───────
+  // IMPROVED: Added auth/account-exists-with-different-credential and
+  // explicit entries for auth/user-not-found, auth/wrong-password
   const getErrorMessage = (errorCode) => {
     const errorMap = {
       'auth/email-already-in-use': 'An account with this email already exists.',
@@ -101,16 +105,42 @@ export function AuthProvider({ children }) {
       'auth/popup-closed-by-user': 'Sign-in popup was closed.',
       'auth/cancelled-popup-request': 'Sign-in was cancelled.',
       'auth/network-request-failed': 'Network error. Please check your connection.',
+      // NEW: Covers the case where a Google user tries email/password, or vice versa
+      'auth/account-exists-with-different-credential':
+        'An account already exists with this email using a different sign-in method.',
     };
     return errorMap[errorCode] || 'An unexpected error occurred. Please try again.';
   };
 
   // ── Sign Up with Email/Password ─────────────────────────────────
+  // IMPROVED: Pre-checks if an account already exists with Google or password
+  // before calling createUserWithEmailAndPassword to prevent duplicates.
   const signUp = useCallback(async (email, password, displayName = '') => {
     try {
       setError(null);
       setLoading(true);
 
+      // ── NEW: Pre-check if this email already has an account ──
+      // fetchSignInMethodsForEmail returns an array of providers for this email.
+      // e.g. ['google.com'], ['password'], ['google.com', 'password'], or []
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+
+      if (methods.includes('google.com')) {
+        // This email is registered via Google Sign-In — block duplicate creation
+        const message = 'An account with this email already exists using Google Sign-In. Please continue with Google.';
+        setError(message);
+        return { success: false, error: message };
+      }
+
+      if (methods.includes('password')) {
+        // This email already has a password account — direct to login
+        const message = 'An account with this email already exists. Please log in.';
+        setError(message);
+        return { success: false, error: message };
+      }
+      // ── END NEW ──
+
+      // No existing account — proceed with registration
       const credential = await createUserWithEmailAndPassword(auth, email, password);
 
       // Update the Firebase profile with display name if provided
@@ -118,7 +148,7 @@ export function AuthProvider({ children }) {
         await updateProfile(credential.user, { displayName });
       }
 
-      // Sync to backend
+      // Sync to backend ── UNCHANGED
       const mongoUser = await syncUserToBackend(credential.user);
       setUser(credential.user);
       setDbUser(mongoUser);
@@ -134,14 +164,31 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Log In with Email/Password ──────────────────────────────────
+  // IMPROVED: Pre-checks if the account is Google-only before attempting
+  // password login, so we can show a helpful message instead of a generic error.
   const logIn = useCallback(async (email, password) => {
     try {
       setError(null);
       setLoading(true);
 
+      // ── NEW: Pre-check what sign-in methods exist for this email ──
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+
+      // If the account exists with Google only (no 'password' provider),
+      // don't even attempt signInWithEmailAndPassword — it would always fail.
+      if (methods.length > 0 && methods.includes('google.com') && !methods.includes('password')) {
+        const message = 'This account was created using Google Sign-In. Please continue with Google.';
+        setError(message);
+        return { success: false, error: message };
+      }
+      // If methods is empty, the user doesn't exist — let Firebase handle it
+      // naturally so it returns the appropriate "user not found" error below.
+      // If methods includes 'password', proceed with normal login.
+      // ── END NEW ──
+
       const credential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Sync to backend
+      // Sync to backend ── UNCHANGED
       const mongoUser = await syncUserToBackend(credential.user);
       setUser(credential.user);
       setDbUser(mongoUser);
@@ -157,7 +204,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ── Sign In with Google ─────────────────────────────────────────
+  // ── Sign In with Google ───────────────────────────────────────── UNCHANGED
   const signInWithGoogle = useCallback(async () => {
     try {
       setError(null);
@@ -185,7 +232,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ── Log Out ─────────────────────────────────────────────────────
+  // ── Log Out ───────────────────────────────────────────────────── UNCHANGED
   const logOut = useCallback(async () => {
     try {
       await signOut(auth);
@@ -203,7 +250,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ── Get current Firebase ID Token (for manual use) ──────────────
+  // ── Get current Firebase ID Token (for manual use) ────────────── UNCHANGED
   const getIdToken = useCallback(async () => {
     if (!user) return null;
     try {
@@ -214,7 +261,7 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  // ── Refresh MongoDB User Profile ──────────────────────────────────
+  // ── Refresh MongoDB User Profile ────────────────────────────────── UNCHANGED
   const refreshDbUser = useCallback(async () => {
     if (!user) return null;
     const mongoUser = await syncUserToBackend(user);
@@ -222,7 +269,7 @@ export function AuthProvider({ children }) {
     return mongoUser;
   }, [user]);
 
-  // ── Context value ──────────────────────────────────────────────
+  // ── Context value ────────────────────────────────────────────── UNCHANGED
   const value = {
     // State
     user,       // Firebase Auth user
