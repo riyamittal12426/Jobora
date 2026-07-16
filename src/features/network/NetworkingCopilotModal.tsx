@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Sparkles, Loader2, Copy, Check, Users, Mail, Link, MessageSquare, Lightbulb, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/apiConfig';
 
 interface NetworkingCopilotModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ const NetworkingCopilotModal = ({ isOpen, onClose, onAddContact }: NetworkingCop
     setIsGenerating(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('http://localhost:5000/api/builder/networking-strategy', {
+      const res = await fetch(`${API_BASE_URL}/api/builder/networking-strategy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Copy, Check, Loader2, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/apiConfig';
 
 const EMAIL_TYPES = [
   'Cold Recruiter Outreach',
@@ -29,7 +30,7 @@ const EmailGeneratorModal = ({ isOpen, onClose, prefillContact = null }) => {
     try {
       setIsGenerating(true);
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/builder/email-outreach`, {
+      const res = await fetch(`${API_BASE_URL}/api/builder/email-outreach`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, Mail, Link, MapPin, Building2, Calendar, MoreVertical, Edit2, Trash2, X, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/apiConfig';
 import EmailGeneratorModal from './EmailGeneratorModal';
 import NetworkingCopilotModal from './NetworkingCopilotModal';
 
@@ -45,7 +46,7 @@ const NetworkCRMPage = () => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/network/${user.email}`, {
+      const res = await fetch(`${API_BASE_URL}/api/network/${user.email}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -91,8 +92,8 @@ const NetworkCRMPage = () => {
     try {
       const token = await user.getIdToken();
       const url = editingContact 
-        ? `http://localhost:5000/api/network/${editingContact._id}`
-        : `http://localhost:5000/api/network`;
+        ? `${API_BASE_URL}/api/network/${editingContact._id}`
+        : `${API_BASE_URL}/api/network`;
       const method = editingContact ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -117,7 +118,7 @@ const NetworkCRMPage = () => {
     if (!window.confirm('Are you sure you want to delete this contact?')) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/network/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/network/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

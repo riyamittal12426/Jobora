@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/apiConfig';
 import { Sparkles, Download, Mail, Phone, MapPin, Globe, Code, ChevronDown, ChevronRight, Wand2, FileText, X, Loader2 } from 'lucide-react';
 import CoverLetterModal from './CoverLetterModal';
 
@@ -25,7 +26,7 @@ const ResumeBuilderPage = () => {
     try {
       setIsLoading(true);
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/builder/profile/${user.email}`, {
+      const res = await fetch(`${API_BASE_URL}/api/builder/profile/${user.email}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -50,7 +51,7 @@ const ResumeBuilderPage = () => {
     try {
       setIsParsing(true);
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/builder/parse/${user.email}`, {
+      const res = await fetch(`${API_BASE_URL}/api/builder/parse/${user.email}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });

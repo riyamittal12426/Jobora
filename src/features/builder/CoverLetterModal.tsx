@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Copy, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/apiConfig';
 
 const CoverLetterModal = ({ isOpen, onClose, profile }) => {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ const CoverLetterModal = ({ isOpen, onClose, profile }) => {
     try {
       setIsGenerating(true);
       const token = await user.getIdToken();
-      const res = await fetch(`http://localhost:5000/api/builder/cover-letter`, {
+      const res = await fetch(`${API_BASE_URL}/api/builder/cover-letter`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

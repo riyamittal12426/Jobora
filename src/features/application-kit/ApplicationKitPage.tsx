@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/services/apiConfig';
 
 type ActiveTab = 'resume' | 'cover' | 'answers' | 'match';
 
@@ -100,7 +101,7 @@ export default function ApplicationKitPage() {
 
     try {
       const token = await user.getIdToken();
-      const res = await fetch('http://localhost:5000/api/builder/application-kit', {
+      const res = await fetch(`${API_BASE_URL}/api/builder/application-kit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
