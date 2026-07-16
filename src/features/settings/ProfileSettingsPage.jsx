@@ -10,12 +10,14 @@ import SecuritySection from './sections/SecuritySection';
 import NotificationSection from './sections/NotificationSection';
 import ResumeSection from './sections/ResumeSection';
 import AnalyticsSection from './sections/AnalyticsSection';
+import AutoApplySection from './sections/AutoApplySection';
 import DashboardLayout from '@/components/UserDashboard/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import axiosInstance from '@/services/axiosInstance';
 
 const NAV_TABS = [
   { id: 'profile', label: 'Profile Information', icon: User },
+  { id: 'autoapply', label: 'Auto-Apply Settings', icon: Settings },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'subscription', label: 'Subscription & Billing', icon: CreditCard },
   { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -26,6 +28,7 @@ const NAV_TABS = [
 
 const SECTION_COMPONENTS = {
   profile: ProfileSection,
+  autoapply: AutoApplySection,
   appearance: AppearanceSection,
   subscription: SubscriptionSection,
   notifications: NotificationSection,
@@ -156,6 +159,7 @@ export default function ProfileSettingsPage() {
             </h2>
             <p className="text-xs text-gray-400 font-[font1] mt-1">
               {activeTab === 'profile' && 'Manage your personal and professional information'}
+              {activeTab === 'autoapply' && 'Set strict criteria to automatically skip unsuited jobs'}
               {activeTab === 'appearance' && 'Customize the look and feel of your dashboard'}
               {activeTab === 'subscription' && 'Manage your subscription plan and billing'}
               {activeTab === 'notifications' && 'Choose what notifications you receive'}

@@ -148,6 +148,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: credential.user };
     } catch (err) {
+      console.error('[Firebase Login Error]', err.code, err.message);
       const message = getErrorMessage(err.code);
       setError(message);
       return { success: false, error: message };

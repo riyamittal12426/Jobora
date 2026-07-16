@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, Mail, Link, MapPin, Building2, Calendar, MoreVertical, Edit2, Trash2, X, Search } from 'lucide-react';
+import { Users, Plus, Mail, Link, MapPin, Building2, Calendar, MoreVertical, Edit2, Trash2, X, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import EmailGeneratorModal from './EmailGeneratorModal';
+import NetworkingCopilotModal from './NetworkingCopilotModal';
 
 const STATUS_OPTIONS = ['To Contact', 'Contacted', 'In Discussion', 'Referral Granted', 'Cold'];
 
@@ -19,6 +21,11 @@ const NetworkCRMPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedContactForEmail, setSelectedContactForEmail] = useState(null);
+  
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -136,12 +143,29 @@ const NetworkCRMPage = () => {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Manage your networking contacts, recruiters, and referral pipeline.</p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors rounded-xl font-semibold text-white text-sm shrink-0 shadow-lg shadow-purple-900/20"
-        >
-          <Plus size={16} /> Add Contact
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => {
+              setSelectedContactForEmail(null);
+              setIsEmailModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-pink-500/10 text-pink-500 hover:bg-pink-500/20 border border-pink-500/20 transition-colors rounded-xl font-semibold text-sm shrink-0"
+          >
+            <Sparkles size={16} /> Draft Email
+          </button>
+          <button 
+            onClick={() => setIsCopilotOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 border border-[#a855f7]/20 transition-colors rounded-xl font-semibold text-sm shrink-0"
+          >
+            <Sparkles size={16} /> AI Copilot
+          </button>
+          <button 
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors rounded-xl font-semibold text-white text-sm shrink-0 shadow-lg shadow-purple-900/20"
+          >
+            <Plus size={16} /> Add Contact
+          </button>
+        </div>
       </div>
 
       {/* Board Layout */}
@@ -199,9 +223,16 @@ const NetworkCRMPage = () => {
                           </a>
                         )}
                         {contact.email && (
-                          <a href={`mailto:${contact.email}`} onClick={e => e.stopPropagation()} className="text-gray-500 hover:text-white transition-colors">
+                          <button 
+                            onClick={e => {
+                              e.stopPropagation();
+                              setSelectedContactForEmail(contact);
+                              setIsEmailModalOpen(true);
+                            }} 
+                            className="text-gray-500 hover:text-pink-400 transition-colors"
+                          >
                             <Mail size={14} />
-                          </a>
+                          </button>
                         )}
                       </div>
                       <span className={`text-[10px] px-2 py-1 rounded-md border font-semibold ${STATUS_COLORS[contact.status]}`}>
@@ -293,6 +324,33 @@ const NetworkCRMPage = () => {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Generator Modal */}
+      <AnimatePresence>
+        {isEmailModalOpen && (
+          <EmailGeneratorModal 
+            isOpen={isEmailModalOpen} 
+            onClose={() => setIsEmailModalOpen(false)} 
+            prefillContact={selectedContactForEmail}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Networking Copilot Modal */}
+      <AnimatePresence>
+        {isCopilotOpen && (
+          <NetworkingCopilotModal
+            isOpen={isCopilotOpen}
+            onClose={() => setIsCopilotOpen(false)}
+            onAddContact={(contact) => {
+              setFormData({ ...contact, email: '', linkedinUrl: '', notes: '' });
+              setEditingContact(null);
+              setIsModalOpen(true);
+              setIsCopilotOpen(false);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

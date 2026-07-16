@@ -83,7 +83,30 @@ ${text}
 }
 
 export async function generateInterviewQuestions(resumeData, settings) {
-  const systemPrompt = `You are a senior technical interviewer from a top tech company (Google, Amazon, Microsoft level).
+  const hasJobContext = settings.jobDescription && settings.jobDescription.trim().length > 0;
+
+  const systemPrompt = hasJobContext
+    ? `You are a senior technical interviewer from a top tech company (Google, Amazon, Microsoft level).
+Generate personalized mock interview questions based on BOTH the candidate's resume AND the specific job description provided.
+Rules:
+- Questions MUST reference specific technologies, projects, or achievements from the resume AND map them to the requirements in the job description.
+- Ask questions a hiring manager for THIS EXACT ROLE would ask, probing whether the candidate's experience meets the JD's needs.
+- Match difficulty: Easy = fundamentals on overlapping stack; Medium = applied scenarios from JD requirements; Hard = system design depth relevant to the role.
+- Interview types: Technical = coding/architecture on their stack mapped to JD; HR = behavioral tied to resume achievements relevant to JD; Project-Based = deep dive projects most relevant to the role; Scenario-Based = real-world problems using JD technologies; Mixed = blend all types.
+- Return ONLY valid JSON with this exact shape:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "text": "question string",
+      "category": "Technical|HR|Project|Scenario",
+      "focusArea": "specific skill or project from resume relevant to JD",
+      "resumeReference": "exact technology/project/achievement referenced",
+      "jdReference": "specific requirement from the job description this question targets"
+    }
+  ]
+}`
+    : `You are a senior technical interviewer from a top tech company (Google, Amazon, Microsoft level).
 Generate personalized mock interview questions STRICTLY based on the candidate's resume.
 Rules:
 - Every question MUST reference specific technologies, projects, tools, or achievements from their resume.
@@ -103,15 +126,19 @@ Rules:
   ]
 }`;
 
+  const jobContextBlock = hasJobContext
+    ? `\nTARGET JOB DESCRIPTION (${settings.jobTitle || 'Role'}):\n${settings.jobDescription.slice(0, 5000)}\n`
+    : '';
+
   const userPrompt = `
 TARGET ROLE: ${settings.targetRole}
 DIFFICULTY: ${settings.difficulty}
 INTERVIEW TYPE: ${settings.interviewType}
 NUMBER OF QUESTIONS: ${settings.questionCount}
-
+${jobContextBlock}
 ${buildResumeContext(resumeData)}
 
-Generate exactly ${settings.questionCount} unique, resume-specific questions ordered from warm-up to challenging.
+Generate exactly ${settings.questionCount} unique, ${hasJobContext ? 'JD-tailored and ' : ''}resume-specific questions ordered from warm-up to challenging.
 `.trim();
 
   const result = await chatJson(systemPrompt, userPrompt, PRIMARY_MODEL, 0.5);

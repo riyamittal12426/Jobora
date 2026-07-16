@@ -419,6 +419,37 @@ async function processJob(browser, run, jobIndex) {
   const profile = await CandidateProfile.findOne({ userEmail: run.userEmail });
   const resumeAnalysis = await ResumeAnalysis.findOne({ userEmail: run.userEmail });
 
+  // ── Dealbreaker Check ───────────────────────────────────────────
+  if (profile && profile.dealbreakers) {
+    const db = profile.dealbreakers;
+    const jInfo = jobEntry.jobInfo;
+    const descLower = (jInfo.description || '').toLowerCase();
+    const typeLower = (jInfo.employmentType || '').toLowerCase();
+    const locLower = (jInfo.location || '').toLowerCase();
+    const compLower = (jInfo.company || '').toLowerCase();
+    
+    let skipReason = null;
+
+    if (db.minSalary && jInfo.salaryMax !== null && jInfo.salaryMax < db.minSalary) {
+      skipReason = `Maximum salary (${jInfo.salaryMax}) is below dealbreaker minimum (${db.minSalary})`;
+    } else if (db.remoteOnly && !(locLower.includes('remote') || typeLower.includes('remote'))) {
+      skipReason = 'Job is not explicitly marked as Remote';
+    } else if (db.noVisaSponsorship && (descLower.includes('does not sponsor') || descLower.includes('will not sponsor') || descLower.includes('cannot sponsor') || descLower.includes('no visa sponsorship') || descLower.includes('no h1b'))) {
+      skipReason = 'Job description indicates no visa sponsorship';
+    } else if (db.noStaffingAgencies && (compLower.includes('staffing') || compLower.includes('recruiting') || compLower.includes('talent') || compLower.includes('consulting') || compLower.includes('solutions'))) {
+      skipReason = 'Company appears to be a staffing/recruiting agency';
+    }
+
+    if (skipReason) {
+      jobEntry.status = 'skipped';
+      addLog(jobEntry, 'warn', `Skipped due to Dealbreaker: ${skipReason}`);
+      run.progress.skipped += 1;
+      await run.save();
+      emit(run._id, 'job_completed', { index: jobIndex, status: 'skipped', reason: skipReason });
+      return;
+    }
+  }
+
   // ── Step 1: Detect platform ─────────────────────────────────────
   const adapter = getAdapter(applyLink);
   jobEntry.platform = adapter.name;

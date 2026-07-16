@@ -27,6 +27,8 @@ const interviewSchema = new mongoose.Schema({
     difficulty: { type: String, required: true },
     interviewType: { type: String, required: true },
     targetRole: { type: String, required: true },
+    jobDescription: { type: String },
+    jobTitle: { type: String },
   },
   resumeSnapshot: { type: mongoose.Schema.Types.Mixed },
   questions: [{
@@ -35,6 +37,7 @@ const interviewSchema = new mongoose.Schema({
     category: String,
     focusArea: String,
     resumeReference: String,
+    jdReference: String,
   }],
   answers: [interviewAnswerSchema],
   currentQuestionIndex: { type: Number, default: 0 },

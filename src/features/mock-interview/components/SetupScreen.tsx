@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Settings2, Target, Layers, Hash, Sparkles } from 'lucide-react';
+import { Settings2, Target, Layers, Hash, Sparkles, Briefcase, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,8 @@ interface SetupScreenProps {
 export function SetupScreen({ resumeData, settings, onChange, onStart, loading }: SetupScreenProps) {
   const set = <K extends keyof InterviewSettings>(key: K, value: InterviewSettings[K]) =>
     onChange({ ...settings, [key]: value });
+
+  const [showJobInput, setShowJobInput] = useState(!!settings.jobDescription);
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-4xl space-y-8">
@@ -46,6 +49,49 @@ export function SetupScreen({ resumeData, settings, onChange, onStart, loading }
             ))}
           </div>
         </CardContent>
+      </Card>
+
+      {/* Job Description (Optional) */}
+      <Card className={`border-2 transition-colors ${showJobInput ? 'border-[#7c3aed]/40 bg-[#7c3aed]/5' : 'border-transparent'}`}>
+        <CardHeader>
+          <button
+            onClick={() => setShowJobInput(!showJobInput)}
+            className="flex items-center justify-between w-full cursor-pointer"
+          >
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Briefcase size={18} className="text-[#a855f7]" /> Link to Job Description
+              {settings.jobDescription && <Badge className="ml-2 bg-[#7c3aed]/20 text-[#c4b5fd] border-0 text-[10px]">Active</Badge>}
+            </CardTitle>
+            {showJobInput ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          </button>
+          <CardDescription>Optional: Paste a specific job description to generate questions tailored to that role.</CardDescription>
+        </CardHeader>
+        {showJobInput && (
+          <CardContent className="space-y-3 pt-0">
+            <input
+              type="text"
+              placeholder="Job Title (e.g. Senior Frontend Engineer at Google)"
+              value={settings.jobTitle || ''}
+              onChange={(e) => set('jobTitle', e.target.value)}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white focus:border-[#7c3aed] focus:outline-none"
+            />
+            <textarea
+              placeholder="Paste the full job description here..."
+              value={settings.jobDescription || ''}
+              onChange={(e) => set('jobDescription', e.target.value)}
+              rows={5}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-[#7c3aed] focus:outline-none resize-none leading-relaxed"
+            />
+            {settings.jobDescription && (
+              <button
+                onClick={() => { set('jobDescription', ''); set('jobTitle', ''); }}
+                className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Clear Job Description
+              </button>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -125,7 +171,13 @@ export function SetupScreen({ resumeData, settings, onChange, onStart, loading }
       </div>
 
       <Button size="lg" className="w-full" onClick={onStart} disabled={loading}>
-        {loading ? 'Generating personalized questions...' : 'Start Interview'}
+        {loading
+          ? settings.jobDescription
+            ? 'Generating JD-tailored questions...'
+            : 'Generating personalized questions...'
+          : settings.jobDescription
+            ? '🎯 Start Job-Specific Interview'
+            : 'Start Interview'}
       </Button>
     </motion.div>
   );

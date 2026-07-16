@@ -87,6 +87,7 @@ router.post('/start', async (req, res) => {
         category: q.category,
         focusArea: q.focusArea,
         resumeReference: q.resumeReference,
+        jdReference: q.jdReference,
       }));
       interview.status = 'in_progress';
       interview.currentQuestionIndex = 0;

@@ -7,6 +7,8 @@ export interface InterviewSettings {
   difficulty: InterviewDifficulty;
   interviewType: InterviewType;
   targetRole: string;
+  jobDescription?: string;
+  jobTitle?: string;
 }
 
 export interface InterviewQuestion {

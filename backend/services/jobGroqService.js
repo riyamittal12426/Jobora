@@ -259,3 +259,163 @@ export function buildApplyReadinessDashboard(jobAnalyses) {
       })),
   };
 }
+
+export async function parseResumeToStructuredData(resumeText) {
+  const system = `You are an expert resume parser. Extract the following raw resume text into a strictly structured JSON object. Break paragraphs in the experience section into concise, actionable bullet points if they aren't already.
+Return ONLY valid JSON matching this structure exactly:
+{
+  "personalInfo": {
+    "fullName": "string", "jobTitle": "string", "location": "string", "email": "string", "phone": "string", "linkedin": "string", "portfolio": "string", "github": "string"
+  },
+  "summary": "string",
+  "skills": ["string"],
+  "experience": [
+    { "company": "string", "role": "string", "startDate": "string", "endDate": "string", "bullets": ["string"] }
+  ],
+  "education": [
+    { "school": "string", "degree": "string", "fieldOfStudy": "string", "startDate": "string", "endDate": "string" }
+  ],
+  "projects": [
+    { "title": "string", "description": "string", "bullets": ["string"], "link": "string" }
+  ]
+}`;
+
+  const user = `RESUME TEXT:\n${resumeText.slice(0, 10000)}`;
+  return chatJson(system, user, PRIMARY_MODEL, 0.2);
+}
+
+export async function generateCoverLetter(profile, jobDescription, companyName, jobTitle) {
+  const system = `You are an expert executive career coach writing a highly tailored, compelling cover letter.
+Do not use generic placeholders like [Company Name] if the data is provided. Make it sound human, passionate, and directly tie the candidate's specific bullet points to the job description's requirements.
+Return ONLY valid JSON:
+{
+  "coverLetter": "string (the full text of the letter, use \\n for line breaks)"
+}`;
+
+  const user = `
+CANDIDATE PROFILE (Use these specific experiences and skills):
+${JSON.stringify(profile, null, 2)}
+
+TARGET JOB:
+Company: ${companyName}
+Title: ${jobTitle}
+
+JOB DESCRIPTION:
+${jobDescription.slice(0, 4000)}
+
+Write the cover letter. Keep it under 400 words. Highlight the exact overlaps between the profile and the JD.
+`.trim();
+
+  return chatJson(system, user, PRIMARY_MODEL, 0.6);
+}
+
+export async function generateOutreachEmail(type, context) {
+  const system = `You are an expert executive career coach and technical recruiter.
+Write a highly effective, professional, and concise email for the requested scenario.
+Avoid generic buzzwords. Make it sound human and direct.
+Return ONLY valid JSON:
+{
+  "subject": "string (the email subject line)",
+  "body": "string (the full body of the email, use \\n for line breaks)"
+}`;
+
+  const user = `
+SCENARIO: ${type}
+
+CONTEXT DETAILS:
+${JSON.stringify(context, null, 2)}
+
+Write the email. Keep it under 200 words if possible. Ensure it includes clear placeholders like [My Name] if necessary, but use the provided context where available.
+`.trim();
+
+  return chatJson(system, user, PRIMARY_MODEL, 0.5);
+}
+
+export async function generateTailoredResumeBullets(profile, job) {
+  const system = `You are an expert ATS optimization specialist and resume writer.
+Given a candidate's experience and a target job description, rewrite the candidate's resume bullets to better align with the job's keywords, requirements, and terminology — while keeping them truthful and grounded in the candidate's actual experience.
+Also produce a tailored professional summary (2-3 sentences) for this specific role.
+Return ONLY valid JSON:
+{
+  "tailoredSummary": "string (2-3 sentence professional summary tailored to this role)",
+  "tailoredExperience": [
+    {
+      "company": "string",
+      "role": "string",
+      "originalBullets": ["string"],
+      "tailoredBullets": ["string"],
+      "relevanceScore": number (0-100)
+    }
+  ],
+  "keywordsInjected": ["string (ATS keywords woven into the bullets)"],
+  "atsScoreBefore": number (0-100),
+  "atsScoreAfter": number (0-100)
+}`;
+
+  const experienceData = (profile.experience || []).map(exp => ({
+    company: exp.company,
+    role: exp.role,
+    bullets: exp.bullets || [exp.description || ''],
+    startDate: exp.startDate,
+    endDate: exp.endDate
+  }));
+
+  const user = `
+CANDIDATE PROFILE:
+Name: ${profile.name || profile.personalInfo?.fullName || 'Candidate'}
+Skills: ${(profile.skills || []).join(', ')}
+Experience:
+${JSON.stringify(experienceData, null, 2)}
+
+TARGET JOB:
+Title: ${job.title || job.jobTitle || 'Target Role'}
+Company: ${job.company || job.companyName || 'Company'}
+Description:
+${(job.description || job.jobDescription || '').slice(0, 5000)}
+
+Rewrite each experience entry's bullets to maximize ATS keyword alignment with this specific job description. Keep bullets truthful. Prioritize experiences most relevant to the role.
+`.trim();
+
+  return chatJson(system, user, PRIMARY_MODEL, 0.4);
+}
+
+export async function generateNetworkingStrategy(profile, job) {
+  const system = `You are a senior career strategist and networking expert.
+Given a candidate's profile and a target job, generate a comprehensive networking strategy: who to reach out to, how to find them, and ready-to-send personalized messages.
+Return ONLY valid JSON:
+{
+  "suggestedContacts": [
+    { "role": "string (e.g. Engineering Manager)", "department": "string", "reason": "string (why this person)" }
+  ],
+  "linkedinSearchUrl": "string (a LinkedIn people search URL for this company)",
+  "connectionMessage": "string (under 280 chars, personalized LinkedIn connection request)",
+  "coldEmail": {
+    "subject": "string",
+    "body": "string (under 200 words, use \\\\n for line breaks)"
+  },
+  "referralRequest": {
+    "subject": "string",
+    "body": "string (under 200 words, for someone you already know at the company)"
+  },
+  "networkingTips": ["string (3-5 actionable tips specific to this company/role)"]
+}`;
+
+  const user = `
+CANDIDATE:
+Name: ${profile.name || profile.personalInfo?.fullName || 'Candidate'}
+Current Title: ${profile.personalInfo?.jobTitle || 'Professional'}
+Skills: ${(profile.skills || []).join(', ')}
+Summary: ${profile.summary || ''}
+
+TARGET JOB:
+Title: ${job.title || job.jobTitle || 'Target Role'}
+Company: ${job.company || job.companyName || 'Company'}
+Location: ${job.location || 'Not specified'}
+Description:
+${(job.description || job.jobDescription || '').slice(0, 4000)}
+
+Generate a networking strategy to get a referral or direct introduction for this specific role. Make messages personalized based on the candidate's actual background.
+`.trim();
+
+  return chatJson(system, user, PRIMARY_MODEL, 0.5);
+}

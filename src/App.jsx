@@ -7,9 +7,11 @@ import MockInterviewPage from './features/mock-interview/MockInterviewPage'
 import JobRecommendationsPage from './features/job-recommendations/JobRecommendationsPage'
 import PrepareApplicationPage from './features/autofill/PrepareApplicationPage'
 import AutomationCenterPage from './features/automation/AutomationCenterPage'
+import ApplicationKitPage from './features/application-kit/ApplicationKitPage'
 import ProfileSettingsPage from './features/settings/ProfileSettingsPage'
 import CareerRoadmapPage from './features/roadmap/CareerRoadmapPage'
 import NetworkCRMPage from './features/network/NetworkCRMPage'
+import ResumeBuilderPage from './features/builder/ResumeBuilderPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 
 const App = () => {
@@ -82,6 +84,22 @@ const App = () => {
           element={
             <ProtectedRoute>
               <NetworkCRMPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/resume-builder' 
+          element={
+            <ProtectedRoute>
+              <ResumeBuilderPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path='/application-kit' 
+          element={
+            <ProtectedRoute>
+              <ApplicationKitPage />
             </ProtectedRoute>
           } 
         />

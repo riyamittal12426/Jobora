@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm = ({ toggleForm }) => {
@@ -34,7 +36,10 @@ const LoginForm = ({ toggleForm }) => {
     setIsSubmitting(true);
     setLocalError('');
 
-    const res = await logIn(email, password);
+    const trimmedEmail = email.trim();
+    console.log('[Login Debug] Attempting login with email:', trimmedEmail);
+    const res = await logIn(trimmedEmail, password);
+    console.log('[Login Debug] Result:', res);
     setIsSubmitting(false);
 
     if (res.success) {
@@ -94,6 +99,26 @@ const LoginForm = ({ toggleForm }) => {
             autoComplete="current-password"
             required
           />
+        </div>
+
+        <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '8px' }}>
+          <span 
+            onClick={async () => {
+              const trimmed = email.trim();
+              if (!trimmed) { setLocalError('Enter your email first, then click Forgot Password.'); return; }
+              try {
+                await sendPasswordResetEmail(auth, trimmed);
+                setLocalError('');
+                alert('Password reset email sent! Check your inbox.');
+              } catch (err) {
+                console.error(err);
+                setLocalError('Could not send reset email. Check the email address.');
+              }
+            }}
+            style={{ fontSize: '12px', color: '#a78bfa', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Forgot Password?
+          </span>
         </div>
 
         <button 

@@ -13,7 +13,9 @@ import {
   ArrowRight,
   Menu,
   X,
-  Users
+  Users,
+  PenTool,
+  Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ShapeBlur from '../Landing/ShapeBlur';
@@ -35,7 +37,8 @@ const DashboardLayout = ({ children, currentPage, pageTitle, pageSubtitle }) => 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
     { id: 'jobs', label: 'Job Matches', path: '/job-recommendations', icon: () => <Briefcase className="w-5 h-5 opacity-80" /> },
-    { id: 'automation', label: 'Auto-Apply', path: '/automation', icon: () => <Terminal className="w-5 h-5 opacity-80" /> },
+    { id: 'application-kit', label: 'Application Kit', path: '/application-kit', icon: () => <Package className="w-5 h-5 opacity-80" /> },
+    { id: 'builder', label: 'Resume Builder', path: '/resume-builder', icon: () => <PenTool className="w-5 h-5 opacity-80" /> },
     { id: 'network', label: 'Network CRM', path: '/network', icon: () => <Users className="w-5 h-5 opacity-80" /> },
     { id: 'mock-interview', label: 'Mock Interview', path: '/mock-interview', icon: () => <Mic2 className="w-5 h-5 opacity-80" /> },
     { id: 'roadmap', label: 'Roadmaps', path: '/roadmap', icon: () => <Compass className="w-5 h-5 opacity-80" /> },
