@@ -27,6 +27,7 @@ import automationRoutes from './routes/automationRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
 import roadmapRoutes from './routes/roadmapRoutes.js';
 import networkRoutes from './routes/networkRoutes.js';
+import resumeBuilderRoutes from './routes/resumeBuilderRoutes.js';
 
 import { PDFParse } from 'pdf-parse';
 
@@ -217,6 +218,7 @@ app.use('/api/automation', apiLimiter, automationRoutes);
 app.use('/api/prediction', apiLimiter, predictionRoutes);
 app.use('/api/roadmap', apiLimiter, roadmapRoutes);
 app.use('/api/network', apiLimiter, networkRoutes);
+app.use('/api/builder', apiLimiter, resumeBuilderRoutes);
 app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
 
 // ─── Resume Analysis Utilities ───────────────────────────────────
@@ -386,6 +388,17 @@ app.post('/api/resume/analyze', upload.single('resume'), async (req, res) => {
     res.status(500).json({ message: 'Failed to analyze resume. Please ensure it is a text-based PDF.' });
   }
 });
+
+// ─── Serve Frontend in Production ────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the Vite build output
+  app.use(express.static(path.join(__dirname, '..', 'dist')));
+
+  // Catch-all: send back index.html for React Router
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  });
+}
 
 // ─── Global Error Handler ────────────────────────────────────────
 app.use((err, req, res, next) => {
